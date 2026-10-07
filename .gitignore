@@ -16,6 +16,11 @@ __pycache__/
 venv/
 .cache/
 .npm_cache/
+.local-tools/
+.local-validation/
+.local-backups/
+.local-baselines/
+.dependency-tree.local.json
 *.tsbuildinfo
 
 # Temporary files and logs

@@ -1,6 +1,8 @@
 import { APP_FILTER } from '@nestjs/core';
 import { Module } from '@nestjs/common';
-import { PlatformModule } from '@lark-apaas/fullstack-nestjs-core';
+import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from './database/database.module';
+import { loadRuntimeConfig } from './common/config';
 
 import { GlobalExceptionFilter } from './common/filters/exception.filter';
 import { MemoPathModule } from './modules/memopath/memopath.module';
@@ -8,8 +10,8 @@ import { ViewModule } from './modules/view/view.module';
 
 @Module({
   imports: [
-    // 平台 Module，提供平台能力
-    PlatformModule.forRoot(),
+    ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, validate: () => loadRuntimeConfig() }),
+    DatabaseModule,
     // ====== @route-section: business-modules START ======
     MemoPathModule,
     // ====== @route-section: business-modules END ======

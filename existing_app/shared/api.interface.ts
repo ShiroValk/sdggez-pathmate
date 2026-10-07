@@ -6,6 +6,8 @@ export interface MemoPathAccount {
   accountId: string;
   role: MemoPathRole;
   displayName: string;
+  /** Server-owned metadata returned by me; login's existing fields stay intact. */
+  isDemo?: boolean;
 }
 
 export interface MemoPathLoginRequest {
@@ -211,3 +213,16 @@ export interface MemoPathFamilyDashboardResponse {
 export interface MemoPathMessageResponse {
   message: string;
 }
+/** Additive care consent contract. Codes are body-only and returned once. */
+export interface MemoPathCareInviteRequest { elderId: string; elderAccount: string; }
+export interface MemoPathCareInvitationResponse { invitationId: string; code: string; expiresAt: string; }
+export interface MemoPathCareCodeRequest { code: string; }
+export interface MemoPathCareAcceptRequest extends MemoPathCareCodeRequest { confirm: true; }
+export interface MemoPathCarePreviewResponse {
+  invitationId: string;
+  elder: { id: string; name: string };
+  family: { displayName: string };
+  expiresAt: string;
+}
+export interface MemoPathCareLinkResponse { id: string; elderId: string; status: 'active'; }
+export interface MemoPathCareLinkListResponse { items: (MemoPathCareLinkResponse & { acceptedAt: string })[]; }

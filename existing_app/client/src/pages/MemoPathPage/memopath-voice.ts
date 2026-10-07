@@ -1,3 +1,7 @@
+/** User-triggered browser speech adapter, never continuous listening. Results
+ * go through the engine's same actions and server DTOs; unsupported/denied
+ * recognition reports an error, not a fabricated command or service success.
+ */
 export interface VoiceRecognizerHandle {
   stop(): void;
   abort(): void;
@@ -65,7 +69,7 @@ export function startVoiceRecognition(options: VoiceRecognizerOptions): VoiceRec
   if (!Ctor) return null;
   const recognition = new Ctor();
   recognition.lang = options.lang;
-  recognition.continuous = true;
+  recognition.continuous = false;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
   let finalAccum = '';

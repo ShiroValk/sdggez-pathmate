@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+coverage/
+.git/
+.env
+.env.*
+!.env.example
+*.log*
+.local-tools/
+.local-validation/
+.local-backups/
+.local-baselines/
+.dependency-tree.local.json
+Dockerfile*
+.dockerignore

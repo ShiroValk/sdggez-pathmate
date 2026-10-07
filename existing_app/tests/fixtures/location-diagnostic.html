@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>PathMate 本机定位诊断</title>
+<style>body{font:18px system-ui;max-width:760px;margin:40px auto;padding:20px}pre{white-space:pre-wrap}button{padding:12px;font:inherit}</style>
+<h1>本机定位诊断</h1>
+<p>仅测试浏览器原生定位，不加载地图，不显示或保存坐标，不调用第三方业务接口。</p>
+<pre id="environment">正在读取浏览器状态…</pre>
+<button id="request">请求真实定位（最多30秒）</button>
+<pre id="result" role="status">尚未请求</pre>
+<script>
+(async () => {
+  let permissionStatus;
+  try { permissionStatus = await navigator.permissions.query({name:'geolocation'}); } catch {}
+  const policy = document.permissionsPolicy || document.featurePolicy;
+  const ua = navigator.userAgent;
+  const engine = /Electron\//.test(ua) ? 'Electron' : /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chromium' : '其他';
+  const os = /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : /Macintosh/.test(ua) ? 'macOS' : '其他';
+  const renderEnvironment = () => {
+    document.getElementById('environment').textContent = JSON.stringify({secureContext:window.isSecureContext,geolocationAvailable:!!navigator.geolocation,permission:permissionStatus ? permissionStatus.state : '无法查询',policyAllowsLocation:policy ? policy.allowsFeature('geolocation') : '无法查询',engine,reportedOS:os},null,2);
+  };
+  if(permissionStatus) permissionStatus.onchange = renderEnvironment;
+  renderEnvironment();
+})();
+document.getElementById('request').onclick = () => {
+  const button = document.getElementById('request');
+  const result = document.getElementById('result');
+  button.disabled = true;
+  result.textContent = '等待真实定位…';
+  const began = performance.now();
+  navigator.geolocation.getCurrentPosition(() => {
+    result.textContent = JSON.stringify({status:'成功（坐标未显示或保存）',elapsedMs:Math.round(performance.now()-began)},null,2);
+    button.disabled = false;
+  }, error => {
+    result.textContent = JSON.stringify({status:'失败',code:error.code,reason:error.code===1?'权限被拒绝':error.code===3?'定位逾时':'位置不可用',elapsedMs:Math.round(performance.now()-began)},null,2);
+    button.disabled = false;
+  }, {timeout:30000,maximumAge:0});
+};
+</script>
+</html>

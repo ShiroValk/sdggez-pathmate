@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/database/database.module';
 import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
 import {
   memopathAlert,
@@ -32,6 +32,7 @@ import type {
   MemoPathTripRecord,
   MemoPathVitalRecord,
 } from '@shared/api.interface';
+import type { MemoPrincipal, MemoTransaction } from './principal';
 import { MemoPathElderService } from './elder.service';
 import type { MemoPathContactDto, MemoPathGeofenceDto, MemoPathPlaceDto, MemoPathTripDto } from './dto';
 
@@ -49,12 +50,12 @@ export class MemoPathFamilyService {
     private readonly elderService: MemoPathElderService,
   ) {}
 
-  async listContacts(ownerId: string, elderId: string): Promise<MemoPathContactRecord[]> {
-    await this.elderService.assertOwnership(ownerId, elderId);
+  async listContacts(principal: MemoPrincipal, elderId: string): Promise<MemoPathContactRecord[]> {
+    await this.elderService.assertAccess(principal, elderId);
     const rows = await this.db
       .select()
       .from(memopathElderContact)
-      .where(eq(memopathElderContact.elderId, elderId))
+      .where(and(eq(memopathElderContact.elderId, elderId), this.elderService.resourceAccess(principal, memopathElderContact.elderId)))
       .orderBy(asc(memopathElderContact.createdAt));
     return rows.map((row): MemoPathContactRecord => ({
       id: row.id,
@@ -67,15 +68,17 @@ export class MemoPathFamilyService {
   }
 
   async addContact(
-    ownerId: string,
+    principal: MemoPrincipal,
     elderId: string,
     dto: MemoPathContactDto,
   ): Promise<MemoPathContactRecord> {
-    await this.elderService.assertOwnership(ownerId, elderId);
-    const inserted = await this.db
+    return this.elderService.withElderWrite(principal, elderId, true, async tx => {
+    const inserted = await tx
       .insert(memopathElderContact)
       .values({
         elderId,
+        createdBy: principal.accountId,
+        updatedBy: principal.accountId,
         name: dto.name,
         relation: dto.relation ?? '',
         phone: dto.phone ?? '',
@@ -91,24 +94,27 @@ export class MemoPathFamilyService {
       phone: row.phone,
       avatarEmoji: row.avatarEmoji,
     };
+    });
   }
 
-  async listTrips(ownerId: string, elderId: string): Promise<MemoPathTripRecord[]> {
-    await this.elderService.assertOwnership(ownerId, elderId);
+  async listTrips(principal: MemoPrincipal, elderId: string): Promise<MemoPathTripRecord[]> {
+    await this.elderService.assertAccess(principal, elderId);
     const rows = await this.db
       .select()
       .from(memopathTrip)
-      .where(eq(memopathTrip.elderId, elderId))
+      .where(and(eq(memopathTrip.elderId, elderId), this.elderService.resourceAccess(principal, memopathTrip.elderId)))
       .orderBy(asc(memopathTrip.tripDate), asc(memopathTrip.startTime));
     return rows.map((row): MemoPathTripRecord => this.toTripRecord(row));
   }
 
-  async createTrip(ownerId: string, dto: MemoPathTripDto): Promise<MemoPathTripRecord> {
-    await this.elderService.assertOwnership(ownerId, dto.elderId);
-    const inserted = await this.db
+  async createTrip(principal: MemoPrincipal, dto: MemoPathTripDto): Promise<MemoPathTripRecord> {
+    return this.elderService.withElderWrite(principal, dto.elderId, true, async tx => {
+    const inserted = await tx
       .insert(memopathTrip)
       .values({
         elderId: dto.elderId,
+        createdBy: principal.accountId,
+        updatedBy: principal.accountId,
         destination: dto.destination,
         tripDate: dto.tripDate,
         startTime: dto.startTime ?? '',
@@ -118,9 +124,10 @@ export class MemoPathFamilyService {
       })
       .returning();
     return this.toTripRecord(inserted[0]);
+    });
   }
 
-  async callCab(ownerId: string, tripId: string): Promise<MemoPathTripRecord> {
+  async callCab(principal: MemoPrincipal, tripId: string): Promise<MemoPathTripRecord> {
     const trips = await this.db
       .select({ id: memopathTrip.id, elderId: memopathTrip.elderId })
       .from(memopathTrip)
@@ -130,20 +137,21 @@ export class MemoPathFamilyService {
     if (!trip) {
       throw new NotFoundException('行程不存在');
     }
-    await this.elderService.assertOwnership(ownerId, trip.elderId);
-    const updated = await this.db
+    return this.elderService.withElderWrite(principal, trip.elderId, false, async tx => {
+    const updated = await tx
       .update(memopathTrip)
-      .set({ status: 'cab_called', updatedAt: new Date() })
+      .set({ status: 'cab_called', updatedAt: new Date(), updatedBy: principal.accountId })
       .where(eq(memopathTrip.id, tripId))
       .returning();
     return this.toTripRecord(updated[0]);
+    });
   }
 
-  async getSetting(ownerId: string): Promise<MemoPathSettingConfig> {
+  async getSetting(principal: MemoPrincipal): Promise<MemoPathSettingConfig> {
     const rows = await this.db
       .select()
       .from(memopathSetting)
-      .where(eq(memopathSetting.createdBy, ownerId))
+      .where(eq(memopathSetting.accountId, principal.accountId))
       .limit(1);
     const row = rows[0];
     const config: MemoPathSettingConfig = {
@@ -170,34 +178,23 @@ export class MemoPathFamilyService {
     };
   }
 
-  async saveSetting(ownerId: string, config: MemoPathSettingConfig): Promise<MemoPathSettingConfig> {
+  async saveSetting(principal: MemoPrincipal, config: MemoPathSettingConfig): Promise<MemoPathSettingConfig> {
     const payload: StoredSettingConfig = {
       language: config.language,
       voice_mode: config.voiceMode,
       lock_layout: config.lockLayout,
     };
-    const existing = await this.db
-      .select({ id: memopathSetting.id })
-      .from(memopathSetting)
-      .where(eq(memopathSetting.createdBy, ownerId))
-      .limit(1);
-    if (existing.length > 0) {
-      await this.db
-        .update(memopathSetting)
-        .set({ config: payload, updatedAt: new Date() })
-        .where(eq(memopathSetting.id, existing[0].id));
-    } else {
-      await this.db.insert(memopathSetting).values({ config: payload });
-    }
-    return this.getSetting(ownerId);
+    await this.db.insert(memopathSetting).values({ accountId: principal.accountId, config: payload, createdBy: principal.accountId, updatedBy: principal.accountId })
+      .onConflictDoUpdate({ target: memopathSetting.accountId, set: { config: payload, updatedAt: new Date(), updatedBy: principal.accountId } });
+    return this.getSetting(principal);
   }
 
-  async getGeofence(ownerId: string, elderId: string): Promise<MemoPathGeofenceRecord> {
-    await this.elderService.assertOwnership(ownerId, elderId);
+  async getGeofence(principal: MemoPrincipal, elderId: string): Promise<MemoPathGeofenceRecord> {
+    await this.elderService.assertAccess(principal, elderId);
     const rows = await this.db
       .select()
       .from(memopathGeofence)
-      .where(eq(memopathGeofence.elderId, elderId))
+      .where(and(eq(memopathGeofence.elderId, elderId), this.elderService.resourceAccess(principal, memopathGeofence.elderId)))
       .limit(1);
     const row = rows[0];
     if (!row) {
@@ -221,33 +218,36 @@ export class MemoPathFamilyService {
   }
 
   async saveGeofence(
-    ownerId: string,
+    principal: MemoPrincipal,
     elderId: string,
     dto: MemoPathGeofenceDto,
   ): Promise<MemoPathGeofenceRecord> {
-    const current: MemoPathGeofenceRecord = await this.getGeofence(ownerId, elderId);
+    return this.elderService.withElderWrite(principal, elderId, true, async tx => {
+    const [stored] = await tx.select().from(memopathGeofence).where(and(eq(memopathGeofence.elderId, elderId), this.elderService.resourceAccess(principal, memopathGeofence.elderId)));
+    const current = stored ?? { homeLabel: '', radiusM: 800, dwellEnabled: true, dwellMinutes: 18 };
     const merged: MemoPathGeofenceInput = {
       homeLabel: dto.homeLabel ?? current.homeLabel,
       radiusM: dto.radiusM ?? current.radiusM,
       dwellEnabled: dto.dwellEnabled ?? current.dwellEnabled,
       dwellMinutes: dto.dwellMinutes ?? current.dwellMinutes,
     };
-    await this.db
+    const [saved] = await tx
       .insert(memopathGeofence)
-      .values({ elderId, ...merged })
+      .values({ elderId, ...merged, createdBy: principal.accountId, updatedBy: principal.accountId })
       .onConflictDoUpdate({
         target: memopathGeofence.elderId,
-        set: { ...merged, updatedAt: new Date() },
-      });
-    return this.getGeofence(ownerId, elderId);
+        set: { ...merged, updatedAt: new Date(), updatedBy: principal.accountId },
+      }).returning();
+    return { id: saved.id, elderId, homeLabel: saved.homeLabel, radiusM: saved.radiusM, dwellEnabled: saved.dwellEnabled, dwellMinutes: saved.dwellMinutes };
+    });
   }
 
-  async listPlaces(ownerId: string, elderId: string): Promise<MemoPathPlaceRecord[]> {
-    await this.elderService.assertOwnership(ownerId, elderId);
+  async listPlaces(principal: MemoPrincipal, elderId: string): Promise<MemoPathPlaceRecord[]> {
+    await this.elderService.assertAccess(principal, elderId);
     const rows = await this.db
       .select()
       .from(memopathPlace)
-      .where(eq(memopathPlace.elderId, elderId))
+      .where(and(eq(memopathPlace.elderId, elderId), this.elderService.resourceAccess(principal, memopathPlace.elderId)))
       .orderBy(asc(memopathPlace.createdAt));
     return rows.map((row): MemoPathPlaceRecord => ({
       id: row.id,
@@ -256,22 +256,27 @@ export class MemoPathFamilyService {
       icon: row.icon,
       placeType: row.placeType as MemoPathPlaceRecord['placeType'],
       beaconStatus: row.beaconStatus as MemoPathPlaceRecord['beaconStatus'],
-      address: '',
-      lng: 0,
-      lat: 0,
+      address: row.address,
+      lng: row.lng ?? 0,
+      lat: row.lat ?? 0,
     }));
   }
 
-  async addPlace(ownerId: string, dto: MemoPathPlaceDto): Promise<MemoPathPlaceRecord> {
-    await this.elderService.assertOwnership(ownerId, dto.elderId);
-    const inserted = await this.db
+  async addPlace(principal: MemoPrincipal, dto: MemoPathPlaceDto): Promise<MemoPathPlaceRecord> {
+    return this.elderService.withElderWrite(principal, dto.elderId, true, async tx => {
+    const inserted = await tx
       .insert(memopathPlace)
       .values({
         elderId: dto.elderId,
+        createdBy: principal.accountId,
+        updatedBy: principal.accountId,
         label: dto.label,
         icon: dto.icon || '📍',
         placeType: dto.placeType ?? 'frequent',
         beaconStatus: dto.beaconStatus ?? 'safe',
+        address: dto.address ?? '',
+        lng: dto.lng ?? null,
+        lat: dto.lat ?? null,
       })
       .returning();
     const row = inserted[0];
@@ -282,18 +287,19 @@ export class MemoPathFamilyService {
       icon: row.icon,
       placeType: row.placeType as MemoPathPlaceRecord['placeType'],
       beaconStatus: row.beaconStatus as MemoPathPlaceRecord['beaconStatus'],
-      address: '',
-      lng: 0,
-      lat: 0,
+      address: row.address,
+      lng: row.lng ?? 0,
+      lat: row.lat ?? 0,
     };
+    });
   }
 
-  async listAlerts(ownerId: string, elderId: string): Promise<MemoPathAlertRecord[]> {
-    await this.elderService.assertOwnership(ownerId, elderId);
+  async listAlerts(principal: MemoPrincipal, elderId: string): Promise<MemoPathAlertRecord[]> {
+    await this.elderService.assertAccess(principal, elderId);
     const rows = await this.db
       .select()
       .from(memopathAlert)
-      .where(eq(memopathAlert.elderId, elderId))
+      .where(and(eq(memopathAlert.elderId, elderId), this.elderService.resourceAccess(principal, memopathAlert.elderId)))
       .orderBy(desc(memopathAlert.occurredAt));
     return rows.map((row): MemoPathAlertRecord => ({
       id: row.id,
@@ -307,15 +313,15 @@ export class MemoPathFamilyService {
   }
 
   async getVitalSummary(
-    ownerId: string,
+    principal: MemoPrincipal,
     elderId: string,
   ): Promise<{ latest: MemoPathVitalRecord | null; trend: MemoPathVitalRecord[] }> {
-    await this.elderService.assertOwnership(ownerId, elderId);
+    await this.elderService.assertAccess(principal, elderId);
     const oneHourAgo: Date = new Date(Date.now() - 60 * 60 * 1000);
     const rows = await this.db
       .select()
       .from(memopathVital)
-      .where(and(eq(memopathVital.elderId, elderId), gte(memopathVital.recordedAt, oneHourAgo)))
+      .where(and(this.elderService.resourceAccess(principal, memopathVital.elderId), eq(memopathVital.elderId, elderId), gte(memopathVital.recordedAt, oneHourAgo)))
       .orderBy(asc(memopathVital.recordedAt));
     const toVitalRecord = (row: typeof memopathVital.$inferSelect): MemoPathVitalRecord => ({
       id: row.id,
@@ -331,12 +337,12 @@ export class MemoPathFamilyService {
     return { latest, trend };
   }
 
-  async listMovements(ownerId: string, elderId: string): Promise<MemoPathMovementRecord[]> {
-    await this.elderService.assertOwnership(ownerId, elderId);
+  async listMovements(principal: MemoPrincipal, elderId: string): Promise<MemoPathMovementRecord[]> {
+    await this.elderService.assertAccess(principal, elderId);
     const rows = await this.db
       .select()
       .from(memopathMovement)
-      .where(eq(memopathMovement.elderId, elderId))
+      .where(and(eq(memopathMovement.elderId, elderId), this.elderService.resourceAccess(principal, memopathMovement.elderId)))
       .orderBy(desc(memopathMovement.occurredDate));
     return rows.map((row): MemoPathMovementRecord => ({
       id: row.id,
@@ -348,18 +354,19 @@ export class MemoPathFamilyService {
     }));
   }
 
-  async getDashboard(ownerId: string, elderId?: string): Promise<MemoPathFamilyDashboardResponse> {
-    const elders = await this.elderService.list(ownerId);
+  async getDashboard(principal: MemoPrincipal, elderId?: string): Promise<MemoPathFamilyDashboardResponse> {
+    if (elderId !== undefined) await this.elderService.assertAccess(principal, elderId);
+    const elders = await this.elderService.list(principal);
     if (elders.length === 0) {
       return { elder: null, latestVital: null, latestAlert: null, places: [], todayTrips: [] };
     }
     const elder = elders.find((item) => item.id === elderId) ?? elders[0];
     const targetId: string = elder.id;
-    const vitals = await this.getVitalSummary(ownerId, targetId);
-    const alerts = await this.listAlerts(ownerId, targetId);
-    const places = await this.listPlaces(ownerId, targetId);
-    const trips = await this.listTrips(ownerId, targetId);
-    const today: string = new Date().toISOString().slice(0, 10);
+    const vitals = await this.getVitalSummary(principal, targetId);
+    const alerts = await this.listAlerts(principal, targetId);
+    const places = await this.listPlaces(principal, targetId);
+    const trips = await this.listTrips(principal, targetId);
+    const today: string = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     return {
       elder,
       latestVital: vitals.latest,
@@ -367,6 +374,84 @@ export class MemoPathFamilyService {
       places,
       todayTrips: trips.filter((trip: MemoPathTripRecord) => trip.tripDate === today),
     };
+  }
+
+  /** Account-private defaults, atomic with registration; no sharing via elder. */
+  async initializeSetting(tx: MemoTransaction, principal: MemoPrincipal): Promise<void> {
+    await tx.insert(memopathSetting).values({ accountId: principal.accountId, createdBy: principal.accountId, updatedBy: principal.accountId,
+      config: { language: 'cantonese', voice_mode: 'default_on', lock_layout: false } });
+  }
+
+  /** Existing clearly simulated dataset; only explicit demo seed calls this. */
+  async seedDemoInTransaction(tx: MemoTransaction, elderId: string): Promise<void> {
+    await tx.insert(memopathElderContact).values([
+      { elderId, name: '阿明', relation: '大仔', phone: '+852 9111 2222', avatarEmoji: '👨‍🦱' },
+      { elderId, name: '婉晴', relation: '孫女', phone: '+852 9222 3333', avatarEmoji: '👩🏻' },
+      { elderId, name: '家欣', relation: '女兒', phone: '+852 9333 4444', avatarEmoji: '👩‍🦱' },
+      { elderId, name: '陳姑娘', relation: '護理員', phone: '+852 9444 5555', avatarEmoji: '👵' },
+    ]);
+
+    await tx.insert(memopathTrip).values([
+      {
+        elderId,
+        destination: '法國醫院',
+        tripDate: '2026-10-02',
+        startTime: '10:00',
+        endTime: '12:00',
+        scheduleMode: 'auto',
+        status: 'pending',
+      },
+      {
+        elderId,
+        destination: '阿仔屋企',
+        tripDate: '2026-10-05',
+        startTime: '15:00',
+        endTime: '',
+        scheduleMode: 'manual',
+        status: 'pending',
+      },
+    ]);
+
+    await tx.insert(memopathGeofence).values({
+      elderId,
+      homeLabel: '家 · 旺角站 A 出口',
+      radiusM: 800,
+      dwellEnabled: true,
+      dwellMinutes: 18,
+    });
+
+    await tx.insert(memopathPlace).values([
+      { elderId, label: '家 · 旺角站 A 出口', icon: '🏠', placeType: 'frequent', beaconStatus: 'safe' },
+      { elderId, label: '公園散步', icon: '🌳', placeType: 'frequent', beaconStatus: 'safe' },
+      { elderId, label: '菜市場', icon: '🥬', placeType: 'frequent', beaconStatus: 'safe' },
+      { elderId, label: '旺角', icon: '📡', placeType: 'beacon', beaconStatus: 'safe' },
+      { elderId, label: '柴灣', icon: '📡', placeType: 'beacon', beaconStatus: 'strange' },
+    ]);
+
+    await tx.insert(memopathAlert).values({
+      elderId,
+      alertType: 'sos',
+      title: '長者按了緊急求助SOS',
+      location: '柴灣站',
+      status: '已通知',
+    });
+
+    const now: Date = new Date();
+    const vitalRows = [76, 78, 77, 79, 78, 78].map((bpm: number, index: number) => ({
+      elderId,
+      heartRate: bpm,
+      bloodOxygen: 97,
+      temperature: '36.5',
+      steps: 2140,
+      recordedAt: new Date(now.getTime() - (5 - index) * 10 * 60 * 1000),
+    }));
+    await tx.insert(memopathVital).values(vitalRows);
+
+    await tx.insert(memopathMovement).values([
+      { elderId, occurredDate: '2026-09-25', location: '某街道', status: 'safe', note: '' },
+      { elderId, occurredDate: '2026-09-25', location: '某商場', status: 'safe', note: '' },
+      { elderId, occurredDate: '2026-09-23', location: '某半島', status: 'out_of_range', note: '超出範圍' },
+    ]);
   }
 
   private toTripRecord(row: typeof memopathTrip.$inferSelect): MemoPathTripRecord {

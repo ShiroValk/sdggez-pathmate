@@ -1,0 +1,1495 @@
+{
+  "id": "638e3ec0-3965-4a57-b4bb-eecabc30b32c",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.memopath_account": {
+      "name": "memopath_account",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_key": {
+          "name": "account_key",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'family'"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_demo": {
+          "name": "is_demo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "session_token_hash": {
+          "name": "session_token_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "session_expires_at": {
+          "name": "session_expires_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_account_key": {
+          "name": "idx_memopath_account_key",
+          "columns": [
+            {
+              "expression": "account_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_memopath_account_session_hash": {
+          "name": "idx_memopath_account_session_hash",
+          "columns": [
+            {
+              "expression": "session_token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"memopath_account\".\"session_token_hash\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_account__created_by_memopath_account_id_fk": {
+          "name": "memopath_account__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_account",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_account__updated_by_memopath_account_id_fk": {
+          "name": "memopath_account__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_account",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "memopath_account_key_check": {
+          "name": "memopath_account_key_check",
+          "value": "length(btrim(\"memopath_account\".\"account_key\")) BETWEEN 1 AND 64 AND \"memopath_account\".\"account_key\" = btrim(\"memopath_account\".\"account_key\")"
+        },
+        "memopath_account_role_check": {
+          "name": "memopath_account_role_check",
+          "value": "\"memopath_account\".\"role\" IN ('family','elder')"
+        },
+        "memopath_account_display_name_check": {
+          "name": "memopath_account_display_name_check",
+          "value": "length(btrim(\"memopath_account\".\"display_name\")) BETWEEN 1 AND 100"
+        },
+        "memopath_account_session_pair_check": {
+          "name": "memopath_account_session_pair_check",
+          "value": "(\"memopath_account\".\"session_token_hash\" IS NULL) = (\"memopath_account\".\"session_expires_at\" IS NULL)"
+        },
+        "memopath_account_session_hash_check": {
+          "name": "memopath_account_session_hash_check",
+          "value": "\"memopath_account\".\"session_token_hash\" IS NULL OR \"memopath_account\".\"session_token_hash\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memopath_alert": {
+      "name": "memopath_alert",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "elder_id": {
+          "name": "elder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alert_type": {
+          "name": "alert_type",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'sos'"
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'notified'"
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_alert_elder": {
+          "name": "idx_memopath_alert_elder",
+          "columns": [
+            {
+              "expression": "elder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_alert__created_by_memopath_account_id_fk": {
+          "name": "memopath_alert__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_alert",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_alert__updated_by_memopath_account_id_fk": {
+          "name": "memopath_alert__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_alert",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_alert_elder_id_fkey": {
+          "name": "memopath_alert_elder_id_fkey",
+          "tableFrom": "memopath_alert",
+          "tableTo": "memopath_elder",
+          "columnsFrom": [
+            "elder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.memopath_elder": {
+      "name": "memopath_elder",
+      "schema": "",
+      "columns": {
+        "owner_account_id": {
+          "name": "owner_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nickname": {
+          "name": "nickname",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relation": {
+          "name": "relation",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "age": {
+          "name": "age",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "gender": {
+          "name": "gender",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "emergency_phone": {
+          "name": "emergency_phone",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "avatar_emoji": {
+          "name": "avatar_emoji",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'👴'"
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_elder_owner": {
+          "name": "idx_memopath_elder_owner",
+          "columns": [
+            {
+              "expression": "owner_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_elder_owner_account_id_memopath_account_id_fk": {
+          "name": "memopath_elder_owner_account_id_memopath_account_id_fk",
+          "tableFrom": "memopath_elder",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "owner_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "memopath_elder__created_by_memopath_account_id_fk": {
+          "name": "memopath_elder__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_elder",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_elder__updated_by_memopath_account_id_fk": {
+          "name": "memopath_elder__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_elder",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "memopath_elder_id_owner_unique": {
+          "name": "memopath_elder_id_owner_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "owner_account_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "memopath_elder_name_check": {
+          "name": "memopath_elder_name_check",
+          "value": "length(btrim(\"memopath_elder\".\"name\")) > 0 AND \"memopath_elder\".\"name\" = btrim(\"memopath_elder\".\"name\")"
+        },
+        "memopath_elder_age_check": {
+          "name": "memopath_elder_age_check",
+          "value": "\"memopath_elder\".\"age\" BETWEEN 0 AND 130"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memopath_elder_contact": {
+      "name": "memopath_elder_contact",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "elder_id": {
+          "name": "elder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relation": {
+          "name": "relation",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "avatar_emoji": {
+          "name": "avatar_emoji",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'👤'"
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_contact_elder": {
+          "name": "idx_memopath_contact_elder",
+          "columns": [
+            {
+              "expression": "elder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_elder_contact__created_by_memopath_account_id_fk": {
+          "name": "memopath_elder_contact__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_elder_contact",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_elder_contact__updated_by_memopath_account_id_fk": {
+          "name": "memopath_elder_contact__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_elder_contact",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_elder_contact_elder_id_fkey": {
+          "name": "memopath_elder_contact_elder_id_fkey",
+          "tableFrom": "memopath_elder_contact",
+          "tableTo": "memopath_elder",
+          "columnsFrom": [
+            "elder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.memopath_geofence": {
+      "name": "memopath_geofence",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "elder_id": {
+          "name": "elder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "home_label": {
+          "name": "home_label",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "radius_m": {
+          "name": "radius_m",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 800
+        },
+        "dwell_enabled": {
+          "name": "dwell_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "dwell_minutes": {
+          "name": "dwell_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 18
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_geofence_elder": {
+          "name": "idx_memopath_geofence_elder",
+          "columns": [
+            {
+              "expression": "elder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_geofence__created_by_memopath_account_id_fk": {
+          "name": "memopath_geofence__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_geofence",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_geofence__updated_by_memopath_account_id_fk": {
+          "name": "memopath_geofence__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_geofence",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_geofence_elder_id_fkey": {
+          "name": "memopath_geofence_elder_id_fkey",
+          "tableFrom": "memopath_geofence",
+          "tableTo": "memopath_elder",
+          "columnsFrom": [
+            "elder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "memopath_geofence_elder_id_unique": {
+          "name": "memopath_geofence_elder_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "elder_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "memopath_geofence_radius_check": {
+          "name": "memopath_geofence_radius_check",
+          "value": "\"memopath_geofence\".\"radius_m\" BETWEEN 100 AND 5000"
+        },
+        "memopath_geofence_dwell_check": {
+          "name": "memopath_geofence_dwell_check",
+          "value": "\"memopath_geofence\".\"dwell_minutes\" BETWEEN 1 AND 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memopath_movement": {
+      "name": "memopath_movement",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "elder_id": {
+          "name": "elder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_date": {
+          "name": "occurred_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hong_Kong')::date"
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'safe'"
+        },
+        "note": {
+          "name": "note",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_movement_elder": {
+          "name": "idx_memopath_movement_elder",
+          "columns": [
+            {
+              "expression": "elder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_movement__created_by_memopath_account_id_fk": {
+          "name": "memopath_movement__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_movement",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_movement__updated_by_memopath_account_id_fk": {
+          "name": "memopath_movement__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_movement",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_movement_elder_id_fkey": {
+          "name": "memopath_movement_elder_id_fkey",
+          "tableFrom": "memopath_movement",
+          "tableTo": "memopath_elder",
+          "columnsFrom": [
+            "elder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "memopath_movement_status_check": {
+          "name": "memopath_movement_status_check",
+          "value": "\"memopath_movement\".\"status\" IN ('safe','out_of_range')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memopath_place": {
+      "name": "memopath_place",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "elder_id": {
+          "name": "elder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "icon": {
+          "name": "icon",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'📍'"
+        },
+        "place_type": {
+          "name": "place_type",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'frequent'"
+        },
+        "beacon_status": {
+          "name": "beacon_status",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'safe'"
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_place_elder": {
+          "name": "idx_memopath_place_elder",
+          "columns": [
+            {
+              "expression": "elder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_place__created_by_memopath_account_id_fk": {
+          "name": "memopath_place__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_place",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_place__updated_by_memopath_account_id_fk": {
+          "name": "memopath_place__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_place",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_place_elder_id_fkey": {
+          "name": "memopath_place_elder_id_fkey",
+          "tableFrom": "memopath_place",
+          "tableTo": "memopath_elder",
+          "columnsFrom": [
+            "elder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "memopath_place_label_check": {
+          "name": "memopath_place_label_check",
+          "value": "length(btrim(\"memopath_place\".\"label\")) > 0"
+        },
+        "memopath_place_type_check": {
+          "name": "memopath_place_type_check",
+          "value": "\"memopath_place\".\"place_type\" IN ('frequent','beacon')"
+        },
+        "memopath_place_beacon_check": {
+          "name": "memopath_place_beacon_check",
+          "value": "\"memopath_place\".\"beacon_status\" IN ('safe','strange')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memopath_setting": {
+      "name": "memopath_setting",
+      "schema": "",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "config": {
+          "name": "config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "memopath_setting_account_id_memopath_account_id_fk": {
+          "name": "memopath_setting_account_id_memopath_account_id_fk",
+          "tableFrom": "memopath_setting",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "memopath_setting__created_by_memopath_account_id_fk": {
+          "name": "memopath_setting__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_setting",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_setting__updated_by_memopath_account_id_fk": {
+          "name": "memopath_setting__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_setting",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "memopath_setting_account_id_unique": {
+          "name": "memopath_setting_account_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "account_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "memopath_setting_config_check": {
+          "name": "memopath_setting_config_check",
+          "value": "jsonb_typeof(\"memopath_setting\".\"config\") = 'object'\n    AND (NOT (\"memopath_setting\".\"config\" ? 'language') OR \"memopath_setting\".\"config\"->>'language' IN ('mandarin','cantonese','english'))\n    AND (NOT (\"memopath_setting\".\"config\" ? 'voice_mode') OR \"memopath_setting\".\"config\"->>'voice_mode' IN ('default_on','standby'))\n    AND (NOT (\"memopath_setting\".\"config\" ? 'lock_layout') OR jsonb_typeof(\"memopath_setting\".\"config\"->'lock_layout') = 'boolean')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memopath_trip": {
+      "name": "memopath_trip",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "elder_id": {
+          "name": "elder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination": {
+          "name": "destination",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trip_date": {
+          "name": "trip_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hong_Kong')::date"
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_time": {
+          "name": "end_time",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schedule_mode": {
+          "name": "schedule_mode",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manual'"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_trip_elder": {
+          "name": "idx_memopath_trip_elder",
+          "columns": [
+            {
+              "expression": "elder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_trip__created_by_memopath_account_id_fk": {
+          "name": "memopath_trip__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_trip",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_trip__updated_by_memopath_account_id_fk": {
+          "name": "memopath_trip__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_trip",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_trip_elder_id_fkey": {
+          "name": "memopath_trip_elder_id_fkey",
+          "tableFrom": "memopath_trip",
+          "tableTo": "memopath_elder",
+          "columnsFrom": [
+            "elder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "memopath_trip_mode_check": {
+          "name": "memopath_trip_mode_check",
+          "value": "\"memopath_trip\".\"schedule_mode\" IN ('auto','manual')"
+        },
+        "memopath_trip_time_check": {
+          "name": "memopath_trip_time_check",
+          "value": "(\"memopath_trip\".\"start_time\" = '' OR \"memopath_trip\".\"start_time\" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')\n    AND (\"memopath_trip\".\"end_time\" = '' OR \"memopath_trip\".\"end_time\" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')\n    AND (\"memopath_trip\".\"start_time\" = '' OR \"memopath_trip\".\"end_time\" = '' OR \"memopath_trip\".\"end_time\" >= \"memopath_trip\".\"start_time\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.memopath_vital": {
+      "name": "memopath_vital",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "elder_id": {
+          "name": "elder_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "heart_rate": {
+          "name": "heart_rate",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "blood_oxygen": {
+          "name": "blood_oxygen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "temperature": {
+          "name": "temperature",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "steps": {
+          "name": "steps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_at": {
+          "name": "_created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_created_by": {
+          "name": "_created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "_updated_at": {
+          "name": "_updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "_updated_by": {
+          "name": "_updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_memopath_vital_elder": {
+          "name": "idx_memopath_vital_elder",
+          "columns": [
+            {
+              "expression": "elder_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "memopath_vital__created_by_memopath_account_id_fk": {
+          "name": "memopath_vital__created_by_memopath_account_id_fk",
+          "tableFrom": "memopath_vital",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_vital__updated_by_memopath_account_id_fk": {
+          "name": "memopath_vital__updated_by_memopath_account_id_fk",
+          "tableFrom": "memopath_vital",
+          "tableTo": "memopath_account",
+          "columnsFrom": [
+            "_updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "memopath_vital_elder_id_fkey": {
+          "name": "memopath_vital_elder_id_fkey",
+          "tableFrom": "memopath_vital",
+          "tableTo": "memopath_elder",
+          "columnsFrom": [
+            "elder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,8 +1,7 @@
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@/lib/logger';
 
 const AMAP_KEY = (import.meta.env.VITE_AMAP_KEY ?? '').trim();
 const REST_BASE = 'https://restapi.amap.com/v3';
-const DEFAULT_POSITION: AMapPoint = { lng: 114.1699, lat: 22.3193 };
 
 export interface AMapPoint {
   lng: number;
@@ -143,13 +142,14 @@ export function getAMapNamespace(): AMapNamespace | null {
   return amapNamespace;
 }
 
-export function getCurrentPosition(fallback?: AMapPoint): Promise<AMapPoint> {
+export function isMapConfigured(): boolean { return AMAP_KEY.length > 0; }
+
+/** Permission/position failure is unavailable, never a made-up current position. */
+export function getCurrentPosition(): Promise<AMapPoint> {
   if (cachedPosition) return Promise.resolve(cachedPosition);
-  const fallbackPoint: AMapPoint = fallback ?? DEFAULT_POSITION;
-  return new Promise<AMapPoint>((resolve) => {
+  return new Promise<AMapPoint>((resolve, reject) => {
     if (!('geolocation' in navigator)) {
-      cachedPosition = fallbackPoint;
-      resolve(fallbackPoint);
+      reject(new Error('此瀏覽器不支援定位'));
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -158,11 +158,11 @@ export function getCurrentPosition(fallback?: AMapPoint): Promise<AMapPoint> {
         resolve(cachedPosition);
       },
       (error: GeolocationPositionError) => {
-        logger.warn('定位失敗，使用預設位置', error.message);
-        cachedPosition = fallbackPoint;
-        resolve(fallbackPoint);
+        const reason: string = error.code === 1 ? '定位權限被拒絕' : error.code === 3 ? '裝置定位逾時' : '裝置無法提供位置';
+        logger.warn(error.code === 1 ? 'position_permission_denied' : error.code === 3 ? 'position_timeout' : 'position_unavailable');
+        reject(new Error(reason));
       },
-      { timeout: 8000, maximumAge: 300000 },
+      { timeout: 30000, maximumAge: 300000 },
     );
   });
 }

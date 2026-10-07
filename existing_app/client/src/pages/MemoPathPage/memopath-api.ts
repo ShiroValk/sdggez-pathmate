@@ -1,7 +1,12 @@
-import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { axiosForBackend } from '@/lib/http';
+import { logger } from '@/lib/logger';
 import type {
   MemoPathAccountExistsResponse,
+  MemoPathAccount,
+  MemoPathCareInvitationResponse,
+  MemoPathCarePreviewResponse,
+  MemoPathCareLinkResponse,
+  MemoPathCareLinkListResponse,
   MemoPathAlertListResponse,
   MemoPathContactInput,
   MemoPathContactListResponse,
@@ -28,6 +33,9 @@ import type {
 } from '@shared/api.interface';
 
 const TOKEN_KEY = 'memopath_token';
+let pendingLogoutToken = '';
+/** Only a boolean is exposed; retry credentials remain in memory, never logs/storage. */
+export function hasPendingLogout(): boolean { return pendingLogoutToken.length > 0; }
 
 export function getToken(): string {
   return localStorage.getItem(TOKEN_KEY) ?? '';
@@ -55,19 +63,46 @@ export function isUnauthorized(error: unknown): boolean {
 
 export function extractErrorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null) {
-    const response = (error as { response?: { data?: { message?: unknown } } }).response;
-    const message: unknown = response?.data?.message;
+    const failure = error as { code?: unknown; response?: { status?: number } };
+    if (failure.code === 'ECONNABORTED' || failure.code === 'ETIMEDOUT') return '請求逾時，請稍後重試（你的輸入已保留）';
+    const response = (error as { response?: { data?: { message?: unknown; error?: { message?: unknown } } } }).response;
+    const message: unknown = response?.data?.error?.message ?? response?.data?.message;
     if (typeof message === 'string' && message.length > 0) {
       return message;
     }
     if (Array.isArray(message) && message.length > 0) {
       return String(message[0]);
     }
+    const status = failure.response?.status;
+    if (status === 401) return '登入已過期，請重新登入';
+    if (status === 403) return '你沒有權限執行此操作';
+    if (status === 409) return '資料狀態已變更，請確認後再試';
+    if (status === 503) return '服務暫時不可用，請稍後重試（你的輸入已保留）';
   }
   return '網絡似乎不太穩定，請檢查網絡後再試一次（你的輸入已保留）';
 }
 
 export const memoApi = {
+  /** Consent never derives from display name, phone, or demo verification. */
+  async inviteCare(elderId: string, elderAccount: string): Promise<MemoPathCareInvitationResponse> {
+    return (await axiosForBackend.post('/api/memopath/care-links/invitations', { elderId, elderAccount }, { headers: authHeaders() })).data;
+  },
+  async previewCare(code: string): Promise<MemoPathCarePreviewResponse> {
+    return (await axiosForBackend.post('/api/memopath/care-links/invitations/preview', { code }, { headers: authHeaders() })).data;
+  },
+  async acceptCare(code: string): Promise<MemoPathCareLinkResponse> {
+    return (await axiosForBackend.post('/api/memopath/care-links/accept', { code, confirm: true }, { headers: authHeaders() })).data;
+  },
+  async careLinks(): Promise<MemoPathCareLinkListResponse> {
+    return (await axiosForBackend.get('/api/memopath/care-links', { headers: authHeaders() })).data;
+  },
+  async revokeCare(id: string, invitation = false): Promise<void> {
+    await axiosForBackend.delete('/api/memopath/care-links/' + (invitation ? 'invitations/' : '') + encodeURIComponent(id), { headers: authHeaders() });
+  },
+  /** Validate stored session and obtain server-owned role before loading data. */
+  async me(): Promise<MemoPathAccount> {
+    return (await axiosForBackend.get('/api/memopath/auth/me', { headers: authHeaders() })).data;
+  },
   async login(account: string, password: string): Promise<MemoPathLoginResponse> {
     const res = await axiosForBackend.post('/api/memopath/auth/login', {
       account,
@@ -94,13 +129,20 @@ export const memoApi = {
     return res.data.exists;
   },
 
-  async logout(): Promise<void> {
+  async logout(token = getToken()): Promise<boolean> {
+    if (!token) return true;
     try {
-      await axiosForBackend.post('/api/memopath/auth/logout', {}, { headers: authHeaders() });
+      await axiosForBackend.post('/api/memopath/auth/logout', {}, { headers: { 'x-memopath-token': token } });
+      if (pendingLogoutToken === token) pendingLogoutToken = '';
+      return true;
     } catch (error) {
-      logger.warn('登出請求失敗', error);
+      if (isUnauthorized(error)) { if (pendingLogoutToken === token) pendingLogoutToken = ''; return true; }
+      pendingLogoutToken = token;
+      logger.warn('logout_unconfirmed');
+      return false;
     }
   },
+  async retryLogout(): Promise<boolean> { return this.logout(pendingLogoutToken); },
 
   async listElders(): Promise<MemoPathElderListResponse> {
     const res = await axiosForBackend.get('/api/memopath/elders', { headers: authHeaders() });

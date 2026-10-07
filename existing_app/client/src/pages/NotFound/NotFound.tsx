@@ -1,9 +1,9 @@
-import { NotFoundRender } from "@lark-apaas/client-toolkit/components/NotFoundRender";
+import { Link } from 'react-router-dom';
 
 const NotFound = () => {
   return (
     <>
-      <NotFoundRender />
+      <main className="p-6"><h1>找不到頁面</h1><Link to="/">返回首頁</Link></main>
     </>
   );
 };

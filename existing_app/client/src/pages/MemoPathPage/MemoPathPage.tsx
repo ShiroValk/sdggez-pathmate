@@ -3,6 +3,9 @@ import logoUrl from '@client/src/assets/memopath-logo.png';
 import { mountMemoApp } from './memopath-engine';
 import { MEMOPATH_CSS } from './memopath-styles';
 
+/** Mobile browser prototype. Engine marks frontend-only demo versus real
+ * authenticated demo persistence; no device telemetry or notification service.
+ */
 const MemoPathPage: React.FC = () => {
   const appRef = useRef<HTMLElement | null>(null);
 

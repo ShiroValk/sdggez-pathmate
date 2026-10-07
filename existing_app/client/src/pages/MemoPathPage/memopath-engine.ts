@@ -1,4 +1,4 @@
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@/lib/logger';
 import type {
   MemoPathAlertRecord,
   MemoPathContactRecord,
@@ -12,8 +12,11 @@ import type {
   MemoPathSettingConfig,
   MemoPathTripRecord,
   MemoPathVitalSummaryResponse,
+  MemoPathCareInvitationResponse,
+  MemoPathCarePreviewResponse,
+  MemoPathCareLinkListResponse,
 } from '@shared/api.interface';
-import { extractErrorMessage, getToken, isUnauthorized, memoApi, setToken } from './memopath-api';
+import { extractErrorMessage, hasPendingLogout, getToken, isUnauthorized, memoApi, setToken } from './memopath-api';
 import { isSpeechSupported, startVoiceRecognition, type VoiceRecognizerHandle } from './memopath-voice';
 import {
   createDestMarker,
@@ -29,6 +32,7 @@ import {
   getCurrentPosition,
   getMapFor,
   loadAMap,
+  isMapConfigured,
   planRoute,
   resolveHomePosition,
   searchTips,
@@ -146,7 +150,7 @@ const DICT: Record<string, [string, string, string]> = {
   switchToFamily: ['切換到家屬端', '切换到家属端', 'Switch to family side'],
   backElderHome: ['返回長者主頁', '返回长者主页', 'Back to elder home'],
   familyGuard: ['家屬端 · 監護中', '家属端 · 监护中', 'Family · Guarding'],
-  liveLocation: ['即時位置', '即时位置', 'Live location'],
+  liveLocation: ['本機裝置位置（非遠端追蹤）', '本机装置位置（非远端追踪）', 'This device location (no remote tracking)'],
   addTodayTrip: ['+增加今日行程', '+增加今日行程', '+ Add today\'s trip'],
   legendHome: ['家', '家', 'Home'],
   legendRoute: ['今日路線', '今日路线', "Today's route"],
@@ -159,7 +163,7 @@ const DICT: Record<string, [string, string, string]> = {
   viewVitals: ['查看生命體徵', '查看生命体征', 'View vitals'],
   taxiSchedule: ['叫車接送排程', '叫车接送排程', 'Taxi schedule'],
   languageTitle: ['語言選擇', '语言选择', 'Language'],
-  languageNote: ['保存後老人端文字與語音自動切換', '保存后老人端文字与语音自动切换', 'UI text switches after saving'],
+  languageNote: ['僅套用於目前帳號，不會同步其他帳號', '仅应用于当前账号，不会同步其他账号', 'UI text switches after saving'],
   voiceModeTitle: ['語音模式（單選）', '语音模式（单选）', 'Voice mode'],
   voiceDefaultOn: ['默認開啟', '默认开启', 'Default on'],
   voiceStandby: ['語音待命', '语音待命', 'Standby'],
@@ -191,7 +195,7 @@ const DICT: Record<string, [string, string, string]> = {
   tripEmpty: ['暫無今日行程，撳「+增加今日行程」安排啦', '暂无今日行程，点「+增加今日行程」安排吧', 'No trips today. Tap "+ Add today\'s trip".'],
   elderTripEmpty: ['暫冇行程安排，可以叫車先', '暂无行程安排，可以先叫车', 'No trips yet. You can call a taxi.'],
   saveTrip: ['💾 保存行程', '💾 保存行程', '💾 Save trip'],
-  autoCallNote: ['到點自動叫車（長者免按）', '到点自动叫车（长者免按）', 'Auto call at time'],
+  autoCallNote: ['自動叫車排程演示（未接入叫車服務）', '自动叫车排程演示（未接入叫车服务）', 'Auto cab schedule demo (no dispatch service)'],
   auto: ['自動', '自动', 'Auto'],
   manual: ['手動', '手动', 'Manual'],
   date: ['日期', '日期', 'Date'],
@@ -232,7 +236,7 @@ const DICT: Record<string, [string, string, string]> = {
   loginDemo: ['登入 / 體驗', '登入 / 体验', 'Log in / Try demo'],
   demoHint: ['任意手機號碼都可以登入體驗（演示模式）', '任意手机号码都可以登录体验（演示模式）', 'Any phone number works (demo mode)'],
   demoWelcome: ['已進入演示模式 · 內置兩位長者嘅資料', '已进入演示模式 · 内置两位长者的资料', 'Demo mode · two sample elders loaded'],
-  frequentTitle: ['常去地點（真實地點 · 可導航）', '常去地点（真实地点 · 可导航）', 'Frequent places (real · navigable)'],
+  frequentTitle: ['常去地點（導航須有效地圖與定位）', '常去地点（导航须有效地图与定位）', 'Frequent places (navigation requires map and location)'],
   addPlaceBtn: ['＋ 添加常去地點', '＋ 添加常去地点', '+ Add frequent place'],
   placeSearchPlaceholder: ['搜索真實地點，如：維多利亞公園', '搜索真实地点，如：维多利亚公园', 'Search a real place, e.g. Victoria Park'],
   placePickHint: ['請搜索並揀一個真實地點', '请搜索并选一个真实地点', 'Search and pick a real place'],
@@ -265,17 +269,17 @@ const DICT: Record<string, [string, string, string]> = {
   cabChangeDest: ['修改終點', '修改终点', 'Change'],
   cabShareTrip: ['行程分享', '行程分享', 'Share'],
   cabLocate: ['定位', '定位', 'Locate'],
-  cabTripHint: ['👆 已叫到車！撳入去睇司機位置', '👆 已叫到车！点进去看司机位置', '👆 Cab called! Tap to see driver'],
-  cabCalledToast: ['已叫車，司機會盡快到達', '已叫车，司机会尽快到达', 'Cab called, driver is coming'],
+  cabTripHint: ['👆 叫車演示已記錄；查看樣例司機', '👆 叫车演示已记录；查看样例司机', '👆 Cab demo recorded; view sample driver'],
+  cabCalledToast: ['叫車演示已記錄，未派車', '叫车演示已记录，未派车', 'Cab demo recorded; no vehicle dispatched'],
   cabSeeDriver: ['睇司機位置', '看司机位置', 'See driver'],
   cabContactToast: ['正在幫你聯繫陳師傅…（演示）', '正在帮你联系陈师傅…（演示）', 'Calling Master Chan… (demo)'],
-  cabNotBoardedToast: ['已通知司機你未上車', '已通知司机你未上车', 'Driver notified you have not boarded'],
+  cabNotBoardedToast: ['演示：未上車提示，未通知司機', '演示：未上车提示，未通知司机', 'Demo: not boarded; driver not notified'],
   cab110Toast: ['正在撥打 110…（演示）', '正在拨打 110…（演示）', 'Calling 110… (demo)'],
   cabSafetyToast: ['進入安全中心（演示）', '进入安全中心（演示）', 'Opening safety center (demo)'],
-  cabArriveToast: ['到咗會通知家人，唔使擔心', '到了会通知家人，不必担心', 'Family will be notified on arrival'],
-  cabShareToast: ['行程已分享畀家人', '行程已分享给家人', 'Trip shared with family'],
+  cabArriveToast: ['演示：到達提醒，未發送通知', '演示：到达提醒，未发送通知', 'Demo: arrival reminder; no notification sent'],
+  cabShareToast: ['演示：行程分享，未發送予家人', '演示：行程分享，未发送给家人', 'Demo: sharing; nothing sent to family'],
   cabChangeToast: ['如需修改終點，請聯繫司機或家人', '如需修改终点，请联系司机或家人', 'Ask driver or family to change destination'],
-  cabLocateToast: ['已定位您嘅當前位置', '已定位你的当前位置', 'Located your current position'],
+  cabLocateToast: ['演示定位按鈕，未取得新位置', '演示定位按钮，未取得新位置', 'Demo location button; no new position obtained'],
 };
 
 function langIndex(lang: MemoLang): number {
@@ -309,7 +313,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     regPassword: '',
     regPassword2: '',
     elders: [],
-    currentElderId: localStorage.getItem(ELDER_KEY) ?? '',
+    currentElderId: '',
     contacts: [],
     trips: [],
     setting: { language: 'cantonese', voiceMode: 'default_on', lockLayout: false },
@@ -345,6 +349,17 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     editingPlaceId: '',
     cabFeedback: 'no',
   };
+
+  let authenticatedRole: MemoPathRole | null = null;
+  let authenticatedIsDemo = false;
+  let careLinks: MemoPathCareLinkListResponse['items'] = [];
+  let careInvitation: MemoPathCareInvitationResponse | null = null;
+  let carePreview: MemoPathCarePreviewResponse | null = null;
+  let careCode = '';
+  let careTarget = '';
+  let careBusy = false;
+  let active = true;
+  let identityGeneration = 0;
 
   let voiceHandle: VoiceRecognizerHandle | null = null;
   let voiceHoldActive = false;
@@ -420,6 +435,14 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   function render(): void {
     const view = views[state.screen] ?? views.login;
     app.innerHTML = view();
+    if (!state.demoMode && authenticatedRole === 'elder') {
+      app.querySelectorAll<HTMLButtonElement>('[data-go="elders"], [data-go="editElder"], [data-action="switchElder"], [data-action="newElder"], [data-action="saveElder"], [data-action="newTrip"], [data-action="saveTrip"], [data-action="addPlace"], [data-action="confirmPlace"], [data-action="saveGeofence"], [data-action="toggleDwell"], [data-action^="radius:"]').forEach(button => { button.disabled = true; button.title = '長者帳號只可讀取照護資料，管理變更由家屬操作'; });
+    }
+    if (state.demoMode) {
+      app.insertAdjacentHTML('afterbegin', '<p class="demo-hint" role="status">前端演示模式：樣例資料只保存在本頁記憶體，不寫入資料庫。天氣、付款、叫車、告警及通知展示不代表真實服務。</p>');
+    } else if (authenticatedRole !== null) {
+      app.insertAdjacentHTML('afterbegin', `<p class="demo-hint" role="status">${authenticatedIsDemo ? '演示帳號：使用真實認證，資料保存至隔離的演示資料範圍。' : '帳號資料使用真實認證與資料庫保存。'}叫車、求助、告警及通知為演示，未接入送達服務。地圖定位僅代表本機裝置，不是長者遠端位置；體徵展示不提供健康判斷。</p>`);
+    }
     if (VOICE_SCREENS.includes(state.screen)) {
       app.insertAdjacentHTML('beforeend', voiceFabHtml() + (state.listening ? voiceOverlayHtml() : ''));
     }
@@ -437,11 +460,31 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
   }
 
+  /** Remove all previous identity data and drafts; pending revocation is held
+   * separately in API module memory for an explicit retry, never localStorage. */
+  function clearIdentityData(): void {
+    identityGeneration += 1;
+    authenticatedRole = null;
+    authenticatedIsDemo = false;
+    careLinks = []; careInvitation = null; carePreview = null; careCode = ''; careTarget = ''; careBusy = false;
+    state.demoMode = false; state.history = []; state.dashboard = null;
+    state.elders = []; state.contacts = []; state.trips = []; state.places = [];
+    state.alerts = []; state.movements = []; state.vitals = { latest: null, trend: [] }; state.vitalsLoaded = false;
+    state.geofence = null; state.currentElderId = ''; localStorage.removeItem(ELDER_KEY);
+    state.setting = { language: 'cantonese', voiceMode: 'default_on', lockLayout: false };
+    state.elderForm = { name: '' }; state.editingElderId = ''; state.tripForm = { destination: '', tripDate: '', startTime: '', scheduleMode: 'auto' };
+    state.newPlaceLabel = ''; state.placeDraft = null; state.editingPlaceId = ''; state.placeSearchText = ''; state.homeSearchText = '';
+    state.mapTips = []; state.destTips = []; state.homeTips = []; state.placeTips = []; state.navDestination = ''; state.navPos = null;
+    state.regPhone = ''; state.regOtp = ''; state.regOtpIssued = ''; state.regPassword = ''; state.regPassword2 = ''; state.loginPassword = '';
+    homePosCache = null; disposeMaps();
+    voiceHandle?.abort(); voiceHandle = null; state.listening = false; state.voiceText = '';
+    window.clearInterval(otpTimer); window.clearTimeout(mapSearchTimer); window.clearTimeout(destSearchTimer); window.clearTimeout(homeSearchTimer); window.clearTimeout(placeSearchTimer);
+  }
+
   function handleApiError(error: unknown): void {
     if (isUnauthorized(error)) {
       setToken('');
-      state.dashboard = null;
-      state.history = [];
+      clearIdentityData();
       toast(t('sessionExpired'));
       if (state.screen !== 'login') nav('login');
       return;
@@ -467,6 +510,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function currentElder(): MemoPathElderRecord | null {
+    if (state.dashboard?.elder?.id === state.currentElderId) return state.dashboard.elder;
     if (state.elders.length === 0) return null;
     return state.elders.find((e: MemoPathElderRecord) => e.id === state.currentElderId) ?? state.elders[0];
   }
@@ -606,6 +650,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function enterDemoMode(): void {
+    clearIdentityData();
     loadDemoData();
     state.loginPassword = '';
     state.history = [];
@@ -629,13 +674,23 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     if (getToken().length === 0) return;
     try {
-      if (screen === 'elderHome' || screen === 'familyHome') {
-        const dashboard: MemoPathFamilyDashboardResponse = await memoApi.getDashboard(
-          state.currentElderId.length > 0 ? state.currentElderId : undefined,
-        );
+      if (screen === 'care') {
+        const generation = identityGeneration;
+        const [links, elders] = await Promise.all([memoApi.careLinks(), memoApi.listElders()]);
+        if (!active || generation !== identityGeneration) return;
+        careLinks = links.items; state.elders = elders.items;
+        rerenderIf(screen);
+      } else if (screen === 'elderHome' || screen === 'familyHome') {
+        const generation = identityGeneration;
+        const [dashboard, setting, elders] = await Promise.all([
+          memoApi.getDashboard(state.currentElderId.length > 0 ? state.currentElderId : undefined),
+          memoApi.getSetting(), memoApi.listElders(),
+        ]);
+        if (!active || generation !== identityGeneration) return;
+        state.setting = setting; state.elders = elders.items;
         state.dashboard = dashboard;
         if (dashboard.elder) setCurrentElder(dashboard.elder.id);
-        if (dashboard.places.length > 0) state.places = dashboard.places.map(normalizePlace);
+        state.places = dashboard.places.map(normalizePlace);
         rerenderIf(screen);
       } else if (screen === 'contacts') {
         const elderId: string = await ensureElderId();
@@ -708,7 +763,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     `<div class="map-wrap">${kind === 'home' ? homeSearchHtml() : (large ? '' : `<button class="map-search" data-go="elderMap">⌕\u3000${t('mapPlaceholder')} <span style="float:right">🎙️</span></button>`)}<div class="map amp ${large ? 'large' : ''}" data-map="${kind}"></div></div>`;
 
   function login(): string {
-    return `<section class="screen auth"><span class="logo">${logo}</span><h1 class="brand-title">${t('brandName')} MemoPath</h1><p class="tagline">${t('tagline')}</p><div class="segmented"><button class="seg ${state.role === 'elder' ? 'active' : ''}" data-role="elder">${t('elderEntry')}</button><button class="seg ${state.role === 'family' ? 'active' : ''}" data-role="family">${t('familyEntry')}</button></div><div class="panel"><div class="field"><label>${t('phoneLabel')}</label><input class="input" data-field="loginAccount" value="${esc(state.loginAccount)}" placeholder="│輸入手機號碼"></div><div class="field"><label>${t('passwordLabel')}</label><input class="input" type="password" data-field="loginPassword" value="${esc(state.loginPassword)}" placeholder="│輸入密碼"></div><button class="forgot" data-go="register1">${t('forgot')}</button></div><button class="primary" data-action="login">${t('loginDemo')}</button><button class="secondary-link" data-go="register1">${t('newUser')}<span>${t('registerNow')}</span></button><p class="demo-hint">${t('demoHint')}</p></section>`;
+    return `<section class="screen auth"><span class="logo">${logo}</span><h1 class="brand-title">${t('brandName')} MemoPath</h1><p class="tagline">${t('tagline')}</p><div class="segmented"><button class="seg ${state.role === 'elder' ? 'active' : ''}" data-role="elder">${t('elderEntry')}</button><button class="seg ${state.role === 'family' ? 'active' : ''}" data-role="family">${t('familyEntry')}</button></div><div class="panel"><div class="field"><label>${t('phoneLabel')}</label><input class="input" data-field="loginAccount" value="${esc(state.loginAccount)}" placeholder="│輸入手機號碼"></div><div class="field"><label>${t('passwordLabel')}</label><input class="input" type="password" data-field="loginPassword" value="${esc(state.loginPassword)}" placeholder="│輸入密碼"></div><button class="forgot" data-go="register1">${t('forgot')}</button></div><button class="primary" data-action="login">${t('login')}</button><button class="secondary-link" data-action="frontDemo">前端演示（不保存至資料庫）</button>${hasPendingLogout() ? '<button class="secondary-link" data-action="retryLogout">重試撤銷舊會話</button>' : ''}<button class="secondary-link" data-go="register1">${t('newUser')}<span>${t('registerNow')}</span></button><p class="demo-hint">真實帳號需註冊；演示帳號 demo / demo1234 使用真實會話及獨立演示資料。</p></section>`;
   }
 
   function otpBoxes(): string {
@@ -721,7 +776,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function register1(): string {
-    return `<section class="screen">${miniHeader()}<h1 class="page-title">${t('step1Title')}</h1><p class="subtitle">${t('step1Sub')}</p><div class="form-card"><label class="field"><span>手機號碼</span><div style="display:flex;align-items:center;gap:8px"><b>+852</b><input class="input" data-field="regPhone" value="${esc(state.regPhone)}" placeholder="│輸入手機號碼"></div></label><button class="primary blue" style="margin-top:0;font-size:16px" data-action="sendOtp">${t('sendOtp')}</button><p class="muted">短信驗證碼</p><div class="otp-row">${otpBoxes()}</div><span class="tiny muted">未收到？<span class="link" data-action="resendOtp">重新發送${otpLeft > 0 ? ` (${otpLeft}s)` : ''}</span></span></div><button class="primary" data-action="regNext">${t('next')}</button></section>`;
+    return `<section class="screen">${miniHeader()}<h1 class="page-title">${t('step1Title')}</h1><p class="subtitle">${t('step1Sub')}</p><div class="form-card"><label class="field"><span>手機號碼</span><div style="display:flex;align-items:center;gap:8px"><b>+852</b><input class="input" data-field="regPhone" maxlength="8" inputmode="numeric" pattern="[0-9]{8}" value="${esc(state.regPhone)}" placeholder="│輸入手機號碼"></div></label><button class="primary blue" style="margin-top:0;font-size:16px" data-action="sendOtp" ${otpLeft > 0 ? 'disabled' : ''}>${t('sendOtp')}</button><p class="muted">演示驗證碼（不發送短信、不驗證手機）</p><div class="otp-row">${otpBoxes()}</div><span class="tiny muted">未收到？<button type="button" class="link" data-action="resendOtp" ${otpLeft > 0 ? 'disabled' : ''}>重新取得${otpLeft > 0 ? ` (${otpLeft}s)` : ''}</button></span></div><button class="primary" data-action="regNext">${t('next')}</button></section>`;
   }
 
   function strengthBars(): string {
@@ -730,7 +785,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     if (pwd.length >= 8) score += 1;
     if (/[0-9]/u.test(pwd) && /[a-zA-Z]/u.test(pwd)) score += 1;
     if (/[^a-zA-Z0-9]/u.test(pwd)) score += 1;
-    const colors: string[] = ['#b23c2b', '#d0a13c', '#d6d6d3'];
+    const colors: string[] = ['#b23c2b', '#d0a13c', '#32834f'];
     const labels: string[] = [t('pwdWeak'), t('pwdMid'), t('pwdStrong')];
     const filled: string[] = colors.map((color: string, index: number) =>
       `<i style="width:60px;height:6px;background:${index < score ? color : '#d6d6d3'};border-radius:5px"></i>`,
@@ -740,7 +795,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function register2(): string {
-    return `<section class="screen">${miniHeader()}<h1 class="page-title">${t('step2Title')}</h1><p class="subtitle">${t('step2Sub')}</p><div class="form-card"><label class="field"><span>${t('passwordLabel')}</span><input class="input" type="password" data-field="regPassword" value="${esc(state.regPassword)}" placeholder="至少 8 位，含數字與字母"></label><label class="field" style="margin-top:14px"><span>${t('confirmPwd')}</span><input class="input" type="password" data-field="regPassword2" value="${esc(state.regPassword2)}" placeholder="再次輸入密碼"></label>${strengthBars()}</div><button class="primary" data-action="regNext2">${t('next')}</button></section>`;
+    return `<section class="screen">${miniHeader()}<h1 class="page-title">${t('step2Title')}</h1><p class="subtitle">${t('step2Sub')}</p><div class="form-card"><label class="field"><span>${t('passwordLabel')}</span><input class="input" type="password" data-field="regPassword" value="${esc(state.regPassword)}" placeholder="至少 8 位，含數字與字母"></label><label class="field" style="margin-top:14px"><span>${t('confirmPwd')}</span><input class="input" type="password" data-field="regPassword2" value="${esc(state.regPassword2)}" placeholder="再次輸入密碼"></label><div data-password-strength aria-live="polite">${strengthBars()}</div></div><button class="primary" data-action="regNext2">${t('next')}</button></section>`;
   }
 
   function relationField(): string {
@@ -773,6 +828,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function elderHome(): string {
+    if (!state.demoMode && authenticatedRole === 'elder' && !state.dashboard?.elder) return '<section class="screen"><h1>等待照護關聯</h1><p>你已登入自己的長者帳號。目前未關聯照護資料；同名或電話不會自動授權。</p><button class="primary" data-go="care">查看並接受照護邀請</button><button data-go="settings">我的設定</button><button data-action="logout">登出</button></section>';
+
     const elderName: string = state.dashboard?.elder?.name ?? state.dashboard?.elder?.nickname ?? '王伯伯';
     return `<section class="screen"><div class="top-brand"><div class="left">${logo}<span>${t('brandName')}<br>MemoPath</span></div><span class="top-actions"><button class="settings-btn" data-go="elderSettings" aria-label="${t('settingsCenter')}">⚙️</button><button class="sos" data-action="sos">🚨報警求助<br>SOS<small>長按3秒撥打999</small></button></span></div><h1 class="greeting">${t('greeting')}，${esc(elderName)} 👋</h1><div class="home-date">${todayLabel()}</div><button class="weather-card" data-go="weather"><span class="weather-icon">🌤️</span><span><strong>${t('todayWeather')}</strong><small>曼谷 31° 酷熱注意</small></span><span class="detail-btn">${t('weatherDetail')}</span></button>${mapMarkup(false, 'home')}${placeChipsHtml()}<div class="quick-grid"><button class="quick" data-go="payment">${t('payCode')}<span class="glyph">▦</span></button><button class="quick" data-go="taxi">${t('quickTaxi')}<span class="glyph">🚕</span></button><button class="quick" data-go="contacts">${t('contactFamily')}<span class="glyph">☎</span></button></div><div class="voice"><span class="mic">🎙</span><span>${t('voiceHint')}</span><button class="press" data-action="voiceToggle">${t('pressLabel')}</button></div></section>`;
   }
@@ -798,7 +855,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function payment(): string {
-    return `<section class="screen"><h1 class="qr-title">${t('payCode')}</h1><p class="qr-sub">將付款碼給店員掃描，完成付款</p><div class="qr" id="qr"></div><button class="done" data-back>【完成】</button></section>`;
+    return `<section class="screen"><h1 class="qr-title">${t('payCode')}</h1><p class="qr-sub">付款碼演示，不能完成真實付款</p><div class="qr" id="qr"></div><button class="done" data-back>【完成】</button></section>`;
   }
 
   function tripStatus(trip: MemoPathTripRecord): string {
@@ -841,7 +898,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     if (!latest) {
       return `<span class="health-pill">♥ ${state.dashboard === null ? t('vitalLoading') : t('vitalEmpty')}</span>`;
     }
-    return `<span class="health-pill">♥ ${t('vitalsTitle')}\u3000${numOrDash(latest.heartRate)} bpm · 血氧 ${numOrDash(latest.bloodOxygen)}% · ${latest.temperature ? latest.temperature.toFixed(1) : '--'}°\u3000<b class="safe">正常</b></span>`;
+    return `<span class="health-pill">♥ ${t('vitalsTitle')}\u3000${numOrDash(latest.heartRate)} bpm · 血氧 ${numOrDash(latest.bloodOxygen)}% · ${latest.temperature ? latest.temperature.toFixed(1) : '--'}°\u3000<b>未作健康判斷</b></span>`;
   }
 
   function familyHome(): string {
@@ -860,11 +917,14 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       `<button class="${cfg.language === value ? 'active' : ''}" data-setting="language:${value}">${label}</button>`;
     const voiceBtn = (value: MemoPathSettingConfig['voiceMode'], label: string): string =>
       `<button class="${cfg.voiceMode === value ? 'active' : ''}" data-setting="voiceMode:${value}">${label}</button>`;
-    return `<section class="screen"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('settingsCenter')}</h1><p class="section-sub">替${esc(currentElder()?.name ?? '長者')}初始化全部參數</p><div class="box"><b>${t('languageTitle')}</b><div class="choice" style="margin-top:10px">${langBtn('mandarin', '普通話')}${langBtn('cantonese', '繁體粵語')}${langBtn('english', 'English')}</div><p class="tiny muted">${t('languageNote')}</p></div><div class="box"><b>${t('voiceModeTitle')}</b><div class="choice" style="grid-template-columns:1fr 1fr;margin-top:10px">${voiceBtn('default_on', t('voiceDefaultOn'))}${voiceBtn('standby', t('voiceStandby'))}</div></div><div class="box toggle-row"><span><b>${t('lockLayout')}</b><br><span class="tiny muted">${t('lockLayoutNote')}</span></span><span class="toggle ${cfg.lockLayout ? '' : 'off'}" data-action="toggleLock"></span></div><div class="chip-row"><button class="chip" data-go="elders">👴 ${t('manageElders')}</button><button class="chip" data-action="switchElder">🔄 ${t('switchElder')}</button><button class="chip" data-action="logout">🔒 ${t('logout')}</button></div></section>`;
+    if (!state.demoMode && authenticatedRole === 'elder') {
+      return `<section class="screen"><button class="back" data-back>${t('backElderHome')}</button><h1 class="section-title">我的設定</h1><p class="section-sub">只調整自己的帳號設定；照護資料須經明確授權。</p><div class="box"><b>${t('languageTitle')}</b><div class="choice">${langBtn('mandarin', '普通話')}${langBtn('cantonese', '繁體粵語')}${langBtn('english', 'English')}</div></div><div class="box"><b>${t('voiceModeTitle')}</b><div class="choice">${voiceBtn('default_on', t('voiceDefaultOn'))}${voiceBtn('standby', t('voiceStandby'))}</div></div><div class="box toggle-row"><span>${t('lockLayout')}</span><span class="toggle ${cfg.lockLayout ? '' : 'off'}" data-action="toggleLock"></span></div><button class="chip" data-action="logout">登出</button></section>`;
+    }
+    return `<section class="screen"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('settingsCenter')}</h1><p class="section-sub">目前帳號的私人設定</p><div class="box"><b>${t('languageTitle')}</b><div class="choice" style="margin-top:10px">${langBtn('mandarin', '普通話')}${langBtn('cantonese', '繁體粵語')}${langBtn('english', 'English')}</div><p class="tiny muted">${t('languageNote')}</p></div><div class="box"><b>${t('voiceModeTitle')}</b><div class="choice" style="grid-template-columns:1fr 1fr;margin-top:10px">${voiceBtn('default_on', t('voiceDefaultOn'))}${voiceBtn('standby', t('voiceStandby'))}</div></div><div class="box toggle-row"><span><b>${t('lockLayout')}</b><br><span class="tiny muted">${t('lockLayoutNote')}</span></span><span class="toggle ${cfg.lockLayout ? '' : 'off'}" data-action="toggleLock"></span></div><button class="chip" data-go="care">照護關聯</button><div class="chip-row"><button class="chip" data-go="elders">👴 ${t('manageElders')}</button><button class="chip" data-action="switchElder">🔄 ${t('switchElder')}</button><button class="chip" data-action="logout">🔒 ${t('logout')}</button></div></section>`;
   }
 
   function elderSettings(): string {
-    return `<section class="screen"><button class="back" data-back>${t('backElderHome')}</button><h1 class="section-title">${t('settingsCenter')}</h1><p class="section-sub">${t('elderSettingsSub')}</p><div class="box"><button class="primary" data-action="switchToFamily">👪 ${t('switchToFamily')}</button></div></section>`;
+    return `<section class="screen"><button class="back" data-back>${t('backElderHome')}</button><h1 class="section-title">${t('settingsCenter')}</h1><p class="section-sub">目前帳號設定與照護授權</p><button class="chip" data-go="care">照護關聯</button><div class="box"><button class="primary" data-action="switchToFamily">${!state.demoMode && authenticatedRole === 'elder' ? '我的私人設定' : '👪 ' + t('switchToFamily')}</button></div></section>`;
   }
 
   function elders(): string {
@@ -903,7 +963,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       )
       .join('') || `<p class="tiny muted">${t('placeEmptyHint')}</p>`;
     const addRow: string = state.addingPlace ? placeFormHtml() : '';
-    return `<section class="screen safety"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('setSafeRange')}</h1><p class="section-sub">設定長者日常活動範圍，超出即通知您</p>${mapMarkup(false, 'safety')}<div class="box"><span>① ${t('frequentTitle')}</span>${rows}${addRow}<button class="chip" data-action="addPlace">${t('addPlaceBtn')}</button></div><div class="box"><span>② 安全圍欄半徑（以家為中心）</span>${sliderHtml(radius)}<div style="display:flex;justify-content:space-between;align-items:center"><small>300m</small><span><button class="pill-btn" data-action="radius:-100">−</button> <b style="font-size:21px;color:#689526">${radius}m</b> <button class="pill-btn" data-action="radius:100">＋</button></span><small>1500m</small></div></div><div class="box toggle-row"><span>滯留告警配置<br><small>原地停留閾值</small></span><span>${geofence?.dwellMinutes ?? 18} 分鐘\u3000<i class="toggle ${(geofence?.dwellEnabled ?? true) ? '' : 'off'}" data-action="toggleDwell" style="display:inline-block"></i></span></div><button class="save" data-action="saveGeofence">💾 保存圍欄設定</button></section>`;
+    return `<section class="screen safety"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('setSafeRange')}</h1><p class="section-sub">保存活動範圍配置；未接入自動偵測或通知送達</p>${mapMarkup(false, 'safety')}<div class="box"><span>① ${t('frequentTitle')}</span>${rows}${addRow}<button class="chip" data-action="addPlace">${t('addPlaceBtn')}</button></div><div class="box"><span>② 安全圍欄半徑（以家為中心）</span>${sliderHtml(radius)}<div style="display:flex;justify-content:space-between;align-items:center"><small>300m</small><span><button class="pill-btn" data-action="radius:-100">−</button> <b style="font-size:21px;color:#689526">${radius}m</b> <button class="pill-btn" data-action="radius:100">＋</button></span><small>1500m</small></div></div><div class="box toggle-row"><span>滯留告警配置<br><small>原地停留閾值</small></span><span>${geofence?.dwellMinutes ?? 18} 分鐘\u3000<i class="toggle ${(geofence?.dwellEnabled ?? true) ? '' : 'off'}" data-action="toggleDwell" style="display:inline-block"></i></span></div><button class="save" data-action="saveGeofence">💾 保存圍欄設定</button></section>`;
   }
 
   function overview(): string {
@@ -948,7 +1008,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       ? formatHourMinute(trend[0]?.recordedAt ?? latest.recordedAt)
       : '--';
     const endLabel: string = latest ? formatHourMinute(latest.recordedAt) : '--';
-    return `<section class="screen"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('vitalsTitle')}</h1><div class="metric-grid" style="margin-top:25px"><div class="metric">♥ ${t('heartRate')}<div class="num">${heartRate}</div>bpm · 正常</div><div class="metric">🩸 ${t('bloodOxygen')}<div class="num">${bloodOxygen}</div>% SpO₂</div><div class="metric">🌡 ${t('bodyTemperature')}<div class="num">${temperature}</div>°C</div><div class="metric">🚶 ${t('todaySteps')}<div class="num">${steps}</div>今日</div></div><div class="chart">${t('hrTrend')}<div class="spark">${spark}</div><div style="display:flex;justify-content:space-between" class="muted"><span>${startLabel}</span><span>${endLabel}</span></div></div></section>`;
+    return `<section class="screen"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('vitalsTitle')}</h1><div class="metric-grid" style="margin-top:25px"><div class="metric">♥ ${t('heartRate')}<div class="num">${heartRate}</div>bpm · 未作健康判斷</div><div class="metric">🩸 ${t('bloodOxygen')}<div class="num">${bloodOxygen}</div>% SpO₂</div><div class="metric">🌡 ${t('bodyTemperature')}<div class="num">${temperature}</div>°C</div><div class="metric">🚶 ${t('todaySteps')}<div class="num">${steps}</div>今日</div></div><div class="chart">${t('hrTrend')}<div class="spark">${spark}</div><div style="display:flex;justify-content:space-between" class="muted"><span>${startLabel}</span><span>${endLabel}</span></div></div></section>`;
   }
 
   function drawSpark(): void {
@@ -992,7 +1052,58 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     return `<section class="screen"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${esc(elderName)}的行程</h1><h2>📋 ${t('pickupSchedule')}</h2>${state.trips.length > 0 ? cards : emptyCards}<button class="new-trip" style="width:100%;display:block" data-action="newTrip">${t('newTripBtn')}</button>${formBlock}${state.tripFormOpen ? '' : detailList}</section>`;
   }
 
+  /** Consent UI displays the exact elder/family summary before acceptance.
+   * Codes live only in this page's memory; errors retain typed input.
+   */
+  function care(): string {
+    if (state.demoMode) return '<section class="screen"><button data-back>返回</button><h1>照護關聯</h1><p>前端演示不建立真實照護關聯。請以真實帳號登入。</p></section>';
+    const family = authenticatedRole === 'family';
+    const disabled = careBusy ? 'disabled' : '';
+    const links = careLinks.map(link => `<div class="box"><p>已授權：${esc(state.elders.find(elder => elder.id === link.elderId)?.name ?? '長者')}</p><button ${disabled} data-action="careRevoke:${esc(link.id)}">撤銷照護關聯</button></div>`).join('');
+    const create = `<label for="care-elder">長者資料</label><select id="care-elder" class="input">${state.elders.map(elder => `<option value="${esc(elder.id)}" ${elder.id === state.currentElderId ? 'selected' : ''}>${esc(elder.name)}</option>`).join('')}</select><label for="care-target">指定長者的登入帳號</label><input id="care-target" class="input" maxlength="64" value="${esc(careTarget)}"><button class="primary" ${disabled} data-action="careInvite">建立邀請</button>${careInvitation ? `<div class="box"><p>只向指定長者提供以下邀請碼，請勿公開分享。有效至 ${esc(careInvitation.expiresAt)}。</p><code>${esc(careInvitation.code)}</code><button ${disabled} data-action="careCancel">撤銷此邀請</button></div>` : ''}`;
+    const accept = `<label for="care-code">家屬提供的邀請碼</label><input id="care-code" class="input" maxlength="43" autocomplete="off" value="${esc(careCode)}"><button class="primary" ${disabled} data-action="carePreview">查看邀請內容</button>${carePreview ? `<div class="box"><h2>確認照護授權</h2><p>家屬：${esc(carePreview.family.displayName)}<br>長者資料：${esc(carePreview.elder.name)}<br>有效至：${esc(carePreview.expiresAt)}</p><p>接受後可讀取這位長者的照護資料並操作本人行程的模擬叫車；不能管理資料或取得家屬的私人設定。你可隨時撤銷。</p><button class="primary" ${disabled} data-action="careAccept">我確認接受照護關聯</button></div>` : ''}`;
+    return `<section class="screen"><button data-back>返回</button><h1>照護關聯</h1><p>需要家屬邀請和指定長者明確接受；姓名、電話與演示碼不會自動授權。</p>${links || '<p>目前沒有有效照護關聯。</p>'}${family ? create : accept}</section>`;
+  }
+
+  async function careAction(action: string): Promise<void> {
+    if (state.demoMode || careBusy) return;
+    const generation = identityGeneration;
+    careBusy = true;
+    try {
+      if (action === 'careInvite') {
+        const elderId = (app.querySelector('#care-elder') as HTMLSelectElement | null)?.value ?? '';
+        if (!elderId) { toast('請先建立自己的長者資料'); return; }
+        const result = await memoApi.inviteCare(elderId, careTarget.trim());
+        if (generation !== identityGeneration) return;
+        careInvitation = result;
+      } else if (action === 'carePreview') {
+        const result = await memoApi.previewCare(careCode.trim());
+        if (generation !== identityGeneration) return;
+        carePreview = result;
+      } else if (action === 'careAccept') {
+        if (!carePreview) return;
+        await memoApi.acceptCare(careCode.trim());
+        if (generation !== identityGeneration) return;
+        carePreview = null; careCode = '';
+        const role = authenticatedRole; const isDemo = authenticatedIsDemo; clearIdentityData(); authenticatedRole = role; authenticatedIsDemo = isDemo;
+        nav('elderHome'); toast('照護關聯已建立');
+      } else if (action === 'careCancel' && careInvitation) {
+        await memoApi.revokeCare(careInvitation.invitationId, true);
+        if (generation !== identityGeneration) return;
+        careInvitation = null;
+      } else if (action.startsWith('careRevoke:')) {
+        await memoApi.revokeCare(action.slice('careRevoke:'.length));
+        if (generation !== identityGeneration) return;
+        const role = authenticatedRole; const isDemo = authenticatedIsDemo; clearIdentityData(); authenticatedRole = role; authenticatedIsDemo = isDemo;
+        await loadScreenData('care'); toast('照護關聯已撤銷，舊照護資料已清除');
+      }
+    } catch (error) {
+      if (generation === identityGeneration) handleApiError(error);
+    } finally { careBusy = false; if (state.screen === 'care') render(); }
+  }
+
   const views: Record<string, () => string> = {
+    care,
     login,
     register1,
     register2,
@@ -1050,21 +1161,22 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   async function doLogin(): Promise<void> {
     const account: string = state.loginAccount.trim();
     if (account.length === 0) {
-      enterDemoMode();
+      toast('請輸入帳號；前端演示請使用明確的演示入口');
       return;
     }
     try {
       const res = await memoApi.login(account, state.loginPassword);
+      clearIdentityData();
       setToken(res.token);
-      state.demoMode = false;
-      state.geofence = null;
+      const verified = await memoApi.me();
+      authenticatedRole = verified.role; authenticatedIsDemo = verified.isDemo === true; state.role = verified.role;
       state.loginPassword = '';
       toast(`歡迎，${res.displayName}`);
       state.history = [];
       nav(state.role === 'elder' ? 'elderHome' : 'familyHome');
     } catch (error) {
-      logger.warn('登入接口失敗，轉為演示模式', error);
-      enterDemoMode();
+      // Wrong credentials are a login failure, not an expired established session.
+      toast(extractErrorMessage(error));
     }
   }
 
@@ -1112,15 +1224,18 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       const res = await memoApi.register({
         account: state.regPhone,
         password: state.regPassword,
-        role: 'family',
+        role: state.role,
         elder: state.elderForm,
       });
+      clearIdentityData();
       setToken(res.token);
-      state.demoMode = false;
-      state.geofence = null;
+      const verified = await memoApi.me();
+      authenticatedRole = verified.role;
+      authenticatedIsDemo = verified.isDemo === true;
+      state.role = verified.role;
       toast('註冊成功，已為你登入');
       state.history = [];
-      nav('familyHome');
+      nav(state.role === 'elder' ? 'elderHome' : 'familyHome');
     } catch (error) {
       const message: string = extractErrorMessage(error);
       if (message.includes('已存在')) {
@@ -1170,7 +1285,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         state.elders = state.elders.map((elder: MemoPathElderRecord) => (
           elder.id === state.editingElderId ? { ...elder, ...state.elderForm } : elder
         ));
-        toast('已儲存長者資料');
+        if (state.dashboard?.elder?.id === state.editingElderId) state.dashboard.elder = state.elders.find(elder => elder.id === state.editingElderId) ?? null;
+        toast('演示長者資料已保存於本頁，未寫入資料庫');
       }
       state.elderForm = { name: '' };
       back();
@@ -1194,7 +1310,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
 
   async function saveGeofence(): Promise<void> {
     if (state.demoMode) {
-      toast('圍欄設定已保存');
+      toast('演示圍欄只保存於本頁，未寫入資料庫');
       return;
     }
     const elderId: string = await ensureElderId();
@@ -1216,6 +1332,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     const next: MemoPathSettingConfig = { ...state.setting, ...patch };
     state.setting = next;
     render();
+    if (state.demoMode) { toast('前端演示設定只保存於本頁，不寫入資料庫'); return; }
     try {
       state.setting = await memoApi.saveSetting(next);
       rerenderIf(state.screen);
@@ -1460,17 +1577,21 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
   }
 
-  const FAKE_MAP_INNER: string =
-    '<div class="route-line one"></div><div class="route-line two"></div><span class="home-pin">🏠</span><span class="now-pin"></span>';
-
   function teardownMap(container: HTMLElement): void {
     const existing: AMapInstance | null = getMapFor(container);
     if (existing) existing.destroy();
   }
 
-  function fakeMapFallback(container: HTMLElement): void {
-    container.classList.remove('amp');
-    container.innerHTML = `${FAKE_MAP_INNER}<button class="map-retry" data-action="retryMap">🔄 ${t('retryMap')}</button>`;
+  /** External map failures never become an illustrative map or fake location. */
+  function unavailableMap(container: HTMLElement, error?: unknown): void {
+    container.classList.add('amp');
+    const positionReason: string = error instanceof Error && ['定位權限被拒絕', '裝置定位逾時', '裝置無法提供位置', '此瀏覽器不支援定位'].includes(error.message) ? error.message : '';
+    const message: string = !isMapConfigured()
+      ? '地圖不可用：尚未配置高德 Key。其他帳號、設定及資料功能仍可使用。'
+      : positionReason
+        ? '高德地圖腳本已載入，但' + positionReason + '，無法顯示即時位置。請檢查裝置定位及瀏覽器權限後重試。'
+        : '高德地圖載入失敗，請檢查網絡、Key及高德安全配置後重試。';
+    container.innerHTML = '<div class="map-loading" role="status">' + message + '</div><button class="map-retry" data-action="retryMap">重試地圖</button>';
   }
 
   async function initLocationMap(
@@ -1494,7 +1615,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         }
       }
       if (!container.isConnected) return;
-      const pos: AMapPoint = await getCurrentPosition(homePos ?? undefined);
+      const pos: AMapPoint = await getCurrentPosition();
       if (!container.isConnected) return;
       container.innerHTML = '';
       const center: AMapPoint = kind === 'safety' && homePos ? homePos : pos;
@@ -1515,7 +1636,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       }
     } catch (error) {
       logger.warn('地圖載入失敗', error);
-      if (container.isConnected) fakeMapFallback(container);
+      if (container.isConnected) unavailableMap(container, error);
     }
   }
 
@@ -1574,6 +1695,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       renderSuggestPanel(app.querySelector('[data-mapsuggest]'), state.mapTips, 'mappick');
     } catch (error) {
       logger.warn('目的地搜索失敗', error);
+      state.mapTips = [];
+      showSuggestionFailure(app.querySelector('[data-mapsuggest]'), error);
     }
   }
 
@@ -1589,7 +1712,18 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       renderSuggestPanel(app.querySelector('[data-destsuggest]'), state.destTips, 'destpick');
     } catch (error) {
       logger.warn('目的地搜索失敗', error);
+      state.destTips = [];
+      showSuggestionFailure(app.querySelector('[data-destsuggest]'), error);
     }
+  }
+
+  /** Only fixed service messages reach the UI; never expose response URLs/keys. */
+  function showSuggestionFailure(panel: HTMLElement | null, error: unknown): void {
+    if (!panel) return;
+    panel.textContent = error instanceof Error && error.message === 'INVALID_USER_KEY'
+      ? '高德 Key 無效或已過期，地點搜尋不可用。請檢查本機配置。'
+      : '高德地點搜尋暫時不可用，請檢查網絡、Key及高德安全配置後重試。';
+    panel.hidden = false;
   }
 
   function showRouteInfo(text: string): void {
@@ -1612,7 +1746,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       toast('地圖未準備好，請稍後再試');
       return;
     }
-    const pos: AMapPoint = await getCurrentPosition(dest);
+    const pos: AMapPoint = await getCurrentPosition();
     const route: AmpRoute | null = await planRoute(mode, pos, dest);
     if (!route) {
       toast('暫時規劃唔到路線，請稍後再試');
@@ -1930,7 +2064,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     const overlay: Element | null = app.querySelector('.overlay');
     if (overlay) overlay.remove();
     if (state.callingTripId.length === 0) {
-      toast('已通知司機，稍後到達');
+      toast('演示：未接入叫車服務，未通知司機');
       return;
     }
     const calledTrip: MemoPathTripRecord | undefined = state.trips.find(
@@ -1978,11 +2112,17 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function runAction(action: string): Promise<void> {
+    if (action.startsWith('care')) { await careAction(action); return; }
+    if (!state.demoMode && authenticatedRole === 'elder' && (['newElder', 'saveElder', 'newTrip', 'saveTrip', 'addPlace', 'confirmPlace', 'saveGeofence', 'toggleDwell', 'switchElder'].includes(action) || action.startsWith('radius:'))) {
+      toast('長者帳號只能讀取照護資料；請由家屬管理變更'); return;
+    }
+    if (!state.demoMode && authenticatedRole === 'elder' && action === 'switchToFamily') { nav('settings'); return; }
     if (action === 'login') {
       await doLogin();
     } else if (action === 'sendOtp' || action === 'resendOtp') {
-      if (state.regPhone.length === 0) {
-        toast('請先輸入手機號碼');
+      if (otpLeft > 0) { toast('請等待倒數結束後重新取得演示碼'); return; }
+      if (!/^[0-9]{8}$/.test(state.regPhone)) {
+        toast('此 +852 手機欄位須輸入8位數字');
         return;
       }
       try {
@@ -1990,7 +2130,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         state.regOtpIssued = res.code;
         state.regOtp = res.code;
         startOtpCountdown();
-        toast(`驗證碼已發送：${res.code}（演示）`);
+        toast(`演示驗證碼：${res.code}（未發送短信）`);
         render();
       } catch (error) {
         handleApiError(error);
@@ -2026,20 +2166,18 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       toast('正在撥打給長者…（演示）');
     } else if (action === 'toggleLock') {
       await saveSetting({ lockLayout: !state.setting.lockLayout });
+    } else if (action === 'frontDemo') {
+      const confirmed = await memoApi.logout(); setToken(''); enterDemoMode();
+      if (!confirmed) toast('前端演示已開啟；舊會話撤銷未確認，可能仍有效至到期。返回登入頁可重試撤銷。');
+    } else if (action === 'retryLogout') {
+      const confirmed = await memoApi.retryLogout(); render();
+      toast(confirmed ? '舊會話已不可用' : '撤銷未確認，請恢復連線後重試；舊會話可能仍有效至到期');
     } else if (action === 'logout') {
-      await memoApi.logout();
-      setToken('');
-      state.demoMode = false;
-      state.history = [];
-      state.dashboard = null;
-      state.geofence = null;
-      state.elders = [];
-      state.contacts = [];
-      state.trips = [];
-      state.places = [];
-      toast('已登出');
-      nav('login');
+      const confirmed = await memoApi.logout();
+      setToken(''); clearIdentityData(); nav('login');
+      toast(confirmed ? '已登出' : '本機資料已清除；服務端撤銷未確認，舊會話可能仍有效至到期。可點擊重試撤銷。');
     } else if (action === 'switchToFamily') {
+      if (!state.demoMode && authenticatedRole !== 'family') { toast('長者帳號不能切換為家屬權限'); return; }
       state.role = 'family';
       state.history = [];
       nav('familyHome');
@@ -2334,6 +2472,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
 
   function onInput(event: Event): void {
     const input: HTMLInputElement = event.target as HTMLInputElement;
+    if (input.id === 'care-target') { careTarget = input.value; return; }
+    if (input.id === 'care-code') { careCode = input.value; carePreview = null; return; }
     const field: string | undefined = input.dataset.field;
     if (!field) return;
     const value: string = input.value;
@@ -2357,8 +2497,16 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     if (field === 'loginAccount') state.loginAccount = value;
     else if (field === 'loginPassword') state.loginPassword = value;
-    else if (field === 'regPhone') state.regPhone = value;
-    else if (field === 'regPassword') state.regPassword = value;
+    else if (field === 'regPhone') {
+      state.regPhone = value.replace(/[^0-9]/g, '').slice(0, 8); input.value = state.regPhone;
+      state.regOtp = ''; state.regOtpIssued = ''; otpLeft = 0; window.clearInterval(otpTimer);
+      app.querySelectorAll<HTMLButtonElement>('[data-action="sendOtp"], [data-action="resendOtp"]').forEach(button => { button.disabled = false; });
+    }
+    else if (field === 'regPassword') {
+      state.regPassword = value;
+      const meter = app.querySelector('[data-password-strength]');
+      if (meter) meter.innerHTML = strengthBars();
+    }
     else if (field === 'regPassword2') state.regPassword2 = value;
     else if (field === 'newPlaceLabel') state.newPlaceLabel = value;
     else if (field === 'homeSearch') {
@@ -2390,8 +2538,18 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   app.addEventListener('pointerup', onVoicePointerUp);
   app.addEventListener('pointercancel', onVoicePointerUp);
   render();
+  /** Refresh restoration trusts me before any business request. */
+  if (getToken()) {
+    const generation = identityGeneration;
+    void memoApi.me().then(verified => {
+      if (!active || generation !== identityGeneration) return;
+      clearIdentityData(); authenticatedRole = verified.role; authenticatedIsDemo = verified.isDemo === true; state.role = verified.role;
+      nav(verified.role === 'elder' ? 'elderHome' : 'familyHome');
+    }).catch(error => { if (active && generation === identityGeneration) handleApiError(error); });
+  }
 
   return () => {
+    active = false; identityGeneration += 1;
     app.removeEventListener('click', onClick);
     app.removeEventListener('input', onInput);
     app.removeEventListener('change', onChange);

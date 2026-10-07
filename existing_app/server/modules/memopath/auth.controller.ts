@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Get,
   Headers,
@@ -29,8 +30,11 @@ export class MemoPathAuthController {
   }
 
   @Get('exists')
-  async exists(@Query('account') account: string): Promise<MemoPathAccountExistsResponse> {
-    return { exists: await this.authService.accountExists(account ?? '') };
+  async exists(@Query('account') account: unknown): Promise<MemoPathAccountExistsResponse> {
+    if (account !== undefined && (typeof account !== 'string' || account.trim().length > 64)) throw new BadRequestException('帳號格式錯誤');
+    // Keep raw query type: a String metadata transform would stringify arrays
+    // before the single-value check, accepting repeated account parameters.
+    return { exists: await this.authService.accountExists(typeof account === 'string' ? account : '') };
   }
 
   @Post('register')
@@ -50,6 +54,7 @@ export class MemoPathAuthController {
       accountId: req.memoAccount.accountId,
       role: req.memoAccount.role as MemoPathAccount['role'],
       displayName: req.memoAccount.displayName,
+      isDemo: req.memoAccount.isDemo,
     };
   }
 

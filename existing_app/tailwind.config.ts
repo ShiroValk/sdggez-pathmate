@@ -1,9 +1,10 @@
-import { createTailwindPresetOfSimple } from '@lark-apaas/fullstack-presets';
+import animate from 'tailwindcss-animate';
 
+/** Preserve class-based dark mode and the existing animation utilities locally. */
 export default {
-  presets: [createTailwindPresetOfSimple()],
+  darkMode: 'class',
   content: [
     './client/src/**/*.{ts,tsx,css}',
   ],
-  plugins: [],
+  plugins: [animate],
 }

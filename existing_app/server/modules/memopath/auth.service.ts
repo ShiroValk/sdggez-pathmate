@@ -1,290 +1,110 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+/** Password/session owner and registration orchestrator. Elder and Family
+ * services own their data initialization within the same explicit transaction.
+ * All public results retain the original shape; no password/hash is returned.
+ */
+import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/database/database.module';
+import { memopathAccount } from '@server/database/schema';
 import { eq, sql } from 'drizzle-orm';
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
-import {
-  memopathAccount,
-  memopathAlert,
-  memopathElder,
-  memopathElderContact,
-  memopathGeofence,
-  memopathMovement,
-  memopathPlace,
-  memopathSetting,
-  memopathTrip,
-  memopathVital,
-} from '@server/database/schema';
-import type {
-  MemoPathElderInput,
-  MemoPathLoginResponse,
-  MemoPathOtpResponse,
-  MemoPathRegisterRequest,
-} from '@shared/api.interface';
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
+import type { MemoPathLoginResponse, MemoPathOtpResponse, MemoPathRegisterRequest } from '@shared/api.interface';
+import { MemoPathElderService } from './elder.service';
+import { MemoPathFamilyService } from './family.service';
+import type { MemoPrincipal } from './principal';
 
 const DEMO_ACCOUNT_KEY = 'demo';
 const DEMO_PASSWORD = 'demo1234';
+const scryptParameters = { N: 16384, r: 8, p: 1 };
 
+/** Preserve salt:hash format and exact password bytes; only DB stores this. */
 function hashPassword(password: string): string {
-  const salt: string = randomBytes(16).toString('hex');
-  const hash: string = scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
+  const salt = randomBytes(16).toString('hex');
+  return `${salt}:${scryptSync(password, salt, 64, scryptParameters).toString('hex')}`;
 }
-
 function verifyPassword(password: string, stored: string): boolean {
+  if (!/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(stored)) return false;
   const [salt, hash] = stored.split(':');
-  if (!salt || !hash) {
-    return false;
-  }
-  const candidate: Buffer = scryptSync(password, salt, 64);
-  const expected: Buffer = Buffer.from(hash, 'hex');
-  return candidate.length === expected.length && timingSafeEqual(candidate, expected);
+  const candidate = scryptSync(password, salt, 64, scryptParameters);
+  return timingSafeEqual(candidate, Buffer.from(hash, 'hex'));
+}
+export function sessionDigest(token: string): string { return createHash('sha256').update(token).digest('hex'); }
+function principal(row: typeof memopathAccount.$inferSelect): MemoPrincipal {
+  return { accountId: row.id, accountKey: row.accountKey, role: row.role as MemoPrincipal['role'], isDemo: row.isDemo, displayName: row.displayName };
+}
+/** postgres-js may wrap SQL errors in cause; inspect only codes, never log it. */
+function uniqueConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const value = error as { code?: string; cause?: unknown };
+  return value.code === '23505' || (value.cause !== error && uniqueConflict(value.cause));
 }
 
 @Injectable()
 export class MemoPathAuthService {
   constructor(
-    @Inject(DRIZZLE_DATABASE)
-    private readonly db: PostgresJsDatabase,
+    @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly config: ConfigService,
+    private readonly elderService: MemoPathElderService,
+    private readonly familyService: MemoPathFamilyService,
   ) {}
 
-  async issueOtp(): Promise<MemoPathOtpResponse> {
-    const code: string = String(Math.floor(100000 + Math.random() * 900000));
-    return { code, expiresIn: 300 };
-  }
+  /** Clearly simulated OTP response; no SMS or phone verification occurs. */
+  async issueOtp(): Promise<MemoPathOtpResponse> { return { code: String(Math.floor(100000 + Math.random() * 900000)), expiresIn: 300 }; }
 
+  /** Atomic account, private settings, optional family elder and session. */
   async register(dto: MemoPathRegisterRequest): Promise<MemoPathLoginResponse> {
-    const key: string = dto.account.trim();
-    const existing = await this.db
-      .select({ id: memopathAccount.id })
-      .from(memopathAccount)
-      .where(eq(memopathAccount.accountKey, key))
-      .limit(1);
-    if (existing.length > 0) {
-      throw new ConflictException('該帳號已存在，請直接登入');
-    }
-    const token: string = randomUUID();
-    const inserted = await this.db
-      .insert(memopathAccount)
-      .values({
-        accountKey: key,
-        passwordHash: hashPassword(dto.password),
-        role: dto.role,
-        displayName: dto.elder.name,
-        sessionToken: token,
-      })
-      .returning({ id: memopathAccount.id });
-    const account = inserted[0];
-    if (dto.role === 'family') {
-      await this.createElder(dto.elder);
-    }
-    return {
-      accountId: account.id,
-      role: dto.role,
-      displayName: dto.elder.name,
-      token,
-    };
+    const key = dto.account.trim();
+    if (key === DEMO_ACCOUNT_KEY) throw new ConflictException('演示帳號保留供演示登入');
+    const token = randomUUID();
+    const passwordHash = hashPassword(dto.password);
+    try {
+      return await this.db.transaction(async tx => {
+        const [row] = await tx.insert(memopathAccount).values({ accountKey: key, passwordHash, role: dto.role, displayName: dto.elder.name,
+          sessionTokenHash: sessionDigest(token), sessionExpiresAt: sql`now() + ${this.config.get<number>('SESSION_TTL_SECONDS')} * interval '1 second'` }).returning();
+        const actor = principal(row);
+        if (actor.role === 'family') await this.elderService.createInTransaction(tx, actor, dto.elder);
+        await this.familyService.initializeSetting(tx, actor);
+        return { accountId: row.id, role: actor.role, displayName: row.displayName, token };
+      });
+    } catch (error) { if (uniqueConflict(error)) throw new ConflictException('該帳號已存在，請直接登入'); throw error; }
   }
 
   async accountExists(accountKey: string): Promise<boolean> {
-    const key: string = accountKey.trim();
-    if (key.length === 0) return false;
-    const rows = await this.db
-      .select({ id: memopathAccount.id })
-      .from(memopathAccount)
-      .where(eq(memopathAccount.accountKey, key))
-      .limit(1);
-    return rows.length > 0;
+    const key = accountKey.trim();
+    if (!key) return false;
+    return (await this.db.select({ id: memopathAccount.id }).from(memopathAccount).where(eq(memopathAccount.accountKey, key)).limit(1)).length > 0;
   }
 
+  /** Login replaces the single active session; wrong demo passwords never seed
+   * or reset credentials. Demo initialization is explicit and transactional.
+   */
   async login(accountKey: string, password: string): Promise<MemoPathLoginResponse> {
-    const key: string = accountKey.trim();
-    const rows = await this.db
-      .select()
-      .from(memopathAccount)
-      .where(eq(memopathAccount.accountKey, key))
-      .limit(1);
-    let account = rows[0];
-    if (!account && key === DEMO_ACCOUNT_KEY) {
-      account = await this.seedDemoAccount();
-    }
-    if (!account || !verifyPassword(password, account.passwordHash)) {
-      if (account && key === DEMO_ACCOUNT_KEY) {
-        await this.db
-          .update(memopathAccount)
-          .set({ passwordHash: hashPassword(DEMO_PASSWORD) })
-          .where(eq(memopathAccount.id, account.id));
-      }
-      throw new UnauthorizedException('帳號或密碼錯誤');
-    }
-    const token: string = randomUUID();
-    await this.db
-      .update(memopathAccount)
-      .set({ sessionToken: token })
-      .where(eq(memopathAccount.id, account.id));
-    return {
-      accountId: account.id,
-      role: account.role as MemoPathLoginResponse['role'],
-      displayName: account.displayName,
-      token,
-    };
+    const key = accountKey.trim();
+    let [row] = await this.db.select().from(memopathAccount).where(eq(memopathAccount.accountKey, key)).limit(1);
+    if (!row && key === DEMO_ACCOUNT_KEY && password === DEMO_PASSWORD && this.config.get<boolean>('DEMO_ACCOUNT_ENABLED')) row = await this.seedDemoAccount();
+    if (!row || (row.isDemo && !this.config.get<boolean>('DEMO_ACCOUNT_ENABLED')) || !verifyPassword(password, row.passwordHash)) throw new UnauthorizedException('帳號或密碼錯誤');
+    const token = randomUUID();
+    await this.db.update(memopathAccount).set({ sessionTokenHash: sessionDigest(token),
+      sessionExpiresAt: sql`now() + ${this.config.get<number>('SESSION_TTL_SECONDS')} * interval '1 second'`, updatedAt: new Date(), updatedBy: row.id }).where(eq(memopathAccount.id, row.id));
+    return { accountId: row.id, role: row.role as MemoPathLoginResponse['role'], displayName: row.displayName, token };
   }
 
+  /** Revoke only the presented session; it cannot revoke a newer relogin token. */
   async logout(token: string): Promise<void> {
-    await this.db
-      .update(memopathAccount)
-      .set({ sessionToken: '' })
-      .where(eq(memopathAccount.sessionToken, token));
+    await this.db.update(memopathAccount).set({ sessionTokenHash: null, sessionExpiresAt: null, updatedAt: new Date() }).where(eq(memopathAccount.sessionTokenHash, sessionDigest(token)));
   }
 
-  private async createElder(input: MemoPathElderInput): Promise<string> {
-    const inserted = await this.db
-      .insert(memopathElder)
-      .values({
-        name: input.name,
-        nickname: input.nickname ?? '',
-        relation: input.relation ?? '',
-        age: input.age ?? 0,
-        gender: input.gender ?? '',
-        address: input.address ?? '',
-        phone: input.phone ?? '',
-        emergencyPhone: input.emergencyPhone ?? '',
-        avatarEmoji: input.avatarEmoji || '👴',
-      })
-      .returning({ id: memopathElder.id });
-    return inserted[0].id;
-  }
-
-  private async seedDemoAccount(): Promise<typeof memopathAccount.$inferSelect | undefined> {
-    const inserted = await this.db
-      .insert(memopathAccount)
-      .values({
-        accountKey: DEMO_ACCOUNT_KEY,
-        passwordHash: hashPassword(DEMO_PASSWORD),
-        role: 'family',
-        displayName: '王伯伯',
-        sessionToken: '',
-      })
-      .returning();
-    const account = inserted[0];
-    if (!account) {
-      return undefined;
-    }
-    await this.seedDemoData();
-    return account;
-  }
-
-  private async seedDemoData(): Promise<void> {
-    const elders = await this.db
-      .insert(memopathElder)
-      .values([
-        {
-          name: '王伯伯',
-          nickname: '阿爸',
-          relation: '父親',
-          age: 78,
-          gender: '男',
-          address: '旺角站 A 出口附近',
-          phone: '+852 9123 4567',
-          emergencyPhone: '+852 9876 5432',
-          avatarEmoji: '👴',
-        },
-        {
-          name: '李婆婆',
-          nickname: '阿媽',
-          relation: '母親',
-          age: 75,
-          gender: '女',
-          address: '旺角站 A 出口附近',
-          phone: '+852 9234 5678',
-          emergencyPhone: '+852 9876 5432',
-          avatarEmoji: '👵',
-        },
-      ])
-      .returning({ id: memopathElder.id, name: memopathElder.name });
-    const uncle: { id: string; name: string } | undefined = elders.find(
-      (item: { id: string; name: string }) => item.name === '王伯伯',
-    );
-    if (!uncle) {
-      return;
-    }
-    const elderId: string = uncle.id;
-
-    await this.db.insert(memopathElderContact).values([
-      { elderId, name: '阿明', relation: '大仔', phone: '+852 9111 2222', avatarEmoji: '👨‍🦱' },
-      { elderId, name: '婉晴', relation: '孫女', phone: '+852 9222 3333', avatarEmoji: '👩🏻' },
-      { elderId, name: '家欣', relation: '女兒', phone: '+852 9333 4444', avatarEmoji: '👩‍🦱' },
-      { elderId, name: '陳姑娘', relation: '護理員', phone: '+852 9444 5555', avatarEmoji: '👵' },
-    ]);
-
-    await this.db.insert(memopathTrip).values([
-      {
-        elderId,
-        destination: '法國醫院',
-        tripDate: '2026-10-02',
-        startTime: '10:00',
-        endTime: '12:00',
-        scheduleMode: 'auto',
-        status: 'pending',
-      },
-      {
-        elderId,
-        destination: '阿仔屋企',
-        tripDate: '2026-10-05',
-        startTime: '15:00',
-        endTime: '',
-        scheduleMode: 'manual',
-        status: 'pending',
-      },
-    ]);
-
-    await this.db.insert(memopathSetting).values({
-      config: sql`'{"language":"cantonese","voice_mode":"default_on","lock_layout":false}'::jsonb`,
+  private async seedDemoAccount(): Promise<typeof memopathAccount.$inferSelect> {
+    return this.db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(176002, 3)`);
+      const [existing] = await tx.select().from(memopathAccount).where(eq(memopathAccount.accountKey, DEMO_ACCOUNT_KEY)).limit(1);
+      if (existing) return existing;
+      const [row] = await tx.insert(memopathAccount).values({ accountKey: DEMO_ACCOUNT_KEY, passwordHash: hashPassword(DEMO_PASSWORD), role: 'family', displayName: '王伯伯', isDemo: true }).returning();
+      const actor = principal(row);
+      const elderId = await this.elderService.seedDemoInTransaction(tx, actor);
+      await this.familyService.initializeSetting(tx, actor);
+      await this.familyService.seedDemoInTransaction(tx, elderId);
+      return row;
     });
-
-    await this.db.insert(memopathGeofence).values({
-      elderId,
-      homeLabel: '家 · 旺角站 A 出口',
-      radiusM: 800,
-      dwellEnabled: true,
-      dwellMinutes: 18,
-    });
-
-    await this.db.insert(memopathPlace).values([
-      { elderId, label: '家 · 旺角站 A 出口', icon: '🏠', placeType: 'frequent', beaconStatus: 'safe' },
-      { elderId, label: '公園散步', icon: '🌳', placeType: 'frequent', beaconStatus: 'safe' },
-      { elderId, label: '菜市場', icon: '🥬', placeType: 'frequent', beaconStatus: 'safe' },
-      { elderId, label: '旺角', icon: '📡', placeType: 'beacon', beaconStatus: 'safe' },
-      { elderId, label: '柴灣', icon: '📡', placeType: 'beacon', beaconStatus: 'strange' },
-    ]);
-
-    await this.db.insert(memopathAlert).values({
-      elderId,
-      alertType: 'sos',
-      title: '長者按了緊急求助SOS',
-      location: '柴灣站',
-      status: '已通知',
-    });
-
-    const now: Date = new Date();
-    const vitalRows = [76, 78, 77, 79, 78, 78].map((bpm: number, index: number) => ({
-      elderId,
-      heartRate: bpm,
-      bloodOxygen: 97,
-      temperature: '36.5',
-      steps: 2140,
-      recordedAt: new Date(now.getTime() - (5 - index) * 10 * 60 * 1000),
-    }));
-    await this.db.insert(memopathVital).values(vitalRows);
-
-    await this.db.insert(memopathMovement).values([
-      { elderId, occurredDate: '2026-09-25', location: '某街道', status: 'safe', note: '' },
-      { elderId, occurredDate: '2026-09-25', location: '某商場', status: 'safe', note: '' },
-      { elderId, occurredDate: '2026-09-23', location: '某半島', status: 'out_of_range', note: '超出範圍' },
-    ]);
   }
 }

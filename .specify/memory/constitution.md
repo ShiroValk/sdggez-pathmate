@@ -1,50 +1,119 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# PathMate Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 模拟与真实能力明确区分
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+演示数据和模拟操作必须明确标明。模拟成功不得作为真实服务完成的证据。
+需求、交付说明与验证记录必须分别说明手机原型、模拟能力和硬件扩展的范围。
+声明某项能力已实现时，必须说明它是模拟能力还是真实能力，以及证据支持的边界。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. 验证与变更风险相称
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+涉及安全、隐私、权限或双端同步的变更，必须验证适用的成功与失败场景。
+普通改动必须按其影响选择检查，并说明选择的检查及结果。
+未执行的检查必须注明原因、结果的不确定性和必要的后续验证条件。
+静态检查与运行验证必须分别说明，不得将未执行的验证表述为通过。
+本章程不强制所有改动采用 TDD，不设未经确认的统一覆盖率或性能门槛。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. 验证全部用户输入
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+所有用户输入必须在受信任的处理边界验证后，才可用于业务操作或持久化。
+验证必须覆盖输入的适用类型、必填性、长度、范围、格式、允许值和字段间业务约束；
+不适用的检查无需强加。嵌套输入与批量输入必须覆盖其内部元素。
+来自请求正文、路径、查询、请求头、表单及语音转换结果的输入同样适用。
+无效输入必须被明确拒绝，不得仅依赖前端检查；涉及资源标识的操作还必须检查访问权限。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+
+### IV. 完整代码文档
+
+项目代码必须具有足以让接手者理解、使用和维护的文档。
+模块、服务、公共接口及函数或方法必须说明其职责、输入与输出、错误或失败行为，
+并记录适用的副作用、依赖、权限和数据约束。
+非显而易见的算法、分支、假设与取舍必须说明原因；
+不要求为每条显而易见的语句添加重复注释。
+变更代码时必须同步更新受影响的文档，文档不得与实际行为相矛盾。
+已有代码缺少文档的情况必须在相关审查中如实记录，不得认定其已经满足本原则。
+
+
+### V. 保持公共 API 兼容
+
+变更必须保持现有受支持公共 API 的兼容性。
+兼容性审查必须覆盖调用方式、请求与响应结构、字段含义、错误约定和可观察行为；
+不能仅凭接口名称未变就认定兼容。
+新增能力必须避免破坏已有调用方，移除、重命名或重新解释既有契约不得静默发生。
+输入验证、服务调整或迁移可能改变调用方行为时，必须记录影响并验证兼容性。
+若确需不兼容能力，必须提出独立版本及迁移方案供用户确认，
+不得将破坏现有受支持 API 的改动直接视为已授权。
+
+
+### VI. 遵循现有服务边界
+
+开发与修复必须遵循现有服务职责和调用边界，
+不得为方便实现而将其他服务的业务职责或受其管理的数据操作任意移入当前服务。
+规划必须说明变更由哪个服务承担、涉及哪些跨服务调用，以及是否改变已有职责。
+确需调整边界时，必须先提出理由、影响、兼容性与迁移安排，由用户确认后执行。
+本原则约束职责归属，不将偶然目录布局、函数命名或现有缺陷提升为永久标准。
+
+
+### VII. 数据库迁移必须有回滚计划
+
+每一次数据库迁移必须附有可审阅的回滚计划。
+计划必须说明回滚触发条件、执行步骤、所需备份或恢复前提、数据恢复策略，
+以及回滚后如何验证数据完整性和应用兼容性。
+若迁移包含不可直接逆转的数据变更，必须明确风险和恢复路径，
+不得仅写“无法回滚”替代计划。
+部署或执行迁移前必须核对计划的可执行条件，记录验证结果或未验证的限制。
+
+
+## 项目范围与已确认基线
+
+项目面向长者与认知障碍者的出行辅助。
+以下冲突处理基线经用户于 2026-10-04 明确确认：
+
+- 本阶段默认只在围栏进出时上传位置。
+- 提醒模式不持续监听麦克风；主动语音操作须另行取得授权。
+- 手机原型不依赖手表；手表能力单列为扩展范围。
+
+每个功能的交付范围必须说明模拟或真实能力。
+改变上述基线必须按治理程序确认，不得仅以已有代码行为作为变更依据。
+上述基线不等于采纳此前未确认的其他候选原则，也不表示已有实现已经符合基线。
+
+## 开发与审查
+
+每项变更的说明必须关联需求，说明影响及验证结果。
+涉及用户输入、公共 API、服务职责、代码文档或数据库迁移时，
+审查必须分别核对本章程对应条款。
+审查结论必须区分通过、有明确例外及尚未验证，不能把检查脚本存在当作通过证据。
+
+发现现有实现违反原则时，必须记录具体差异与影响并安排后续工作；
+章程采纳本身不证明已有代码合规，也不自动授权重写或修改应用。
+审查发现规则冲突时必须交由用户确认处理方案。
+不固定框架、目录结构、测试工具、测试覆盖率或 CI 门槛。
+
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+本章程仅包含用户明确采纳的原则和基线。
+本次采纳此前候选 P5、P8 及五项新增工程要求；
+此前候选 P1–P4、P6–P7 未获采纳，不作为本章程的强制条款。
+模板示例与偶然代码做法不能自行产生治理约束。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+章程修订由当前用户确认。修订提案必须说明修改内容、理由、受影响需求和已有实现、
+适用范围及必要的迁移安排；确认后方可写入正式章程。
+原则冲突或例外必须记录理由、影响及批准者，由用户明确批准。
+例外批准不自动修改章程，变更章程须另行记录其版本。
+
+规划与变更审查必须核对适用条款，并记录合规证据、例外或验证限制。
+发现需求、既有实现或其他文档与章程冲突时必须说明差异并提交用户决定，
+不得静默忽略其中任一要求。
+
+版本采用语义化规则：破坏性原则变更、删除或重新定义升级主版本；
+新增原则或实质扩展升级次版本；不改变约束含义的澄清与文字修正升级修订版本。
+章程于 2026-10-04 首次采纳，初始版本为 1.0.0。
+本次仅移除依据说明，规则含义不变，修订版本为 1.0.1。
+
+
+**Version**: 1.0.1 | **Ratified**: 2026-10-04 | **Last Amended**: 2026-10-04

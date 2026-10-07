@@ -1,31 +1,35 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
-import { configureApp } from '@lark-apaas/fullstack-nestjs-core';
+import 'reflect-metadata';
 import { join } from 'path';
-import { __express as hbsExpressEngine } from 'hbs';
 
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { AppModule } from './app.module';
+import { diagnostic, requestDiagnostics, SafeNestLogger } from './common/logger';
+import { loadRuntimeConfig } from './common/config';
+import { InputValidationPipe } from './common/input-validation';
 
 async function bootstrap() {
+  const config = loadRuntimeConfig();
+  // ConfigModule validates during module loading: keep that inside the handled
+  // startup path so direct production execution also fails without a raw stack.
+  const { AppModule } = await import('./app.module');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    abortOnError: process.env.NODE_ENV !== 'development',
+    abortOnError: false,
+    logger: new SafeNestLogger(),
   });
-  await configureApp(app, { 
-    disableSwagger: true,
-  });
-  const logger = new Logger('Bootstrap');
-  const host = process.env.SERVER_HOST || 'localhost';
-  const port = Number(process.env.SERVER_PORT || '3000');
+  app.use(requestDiagnostics);
+  app.useGlobalPipes(new InputValidationPipe());
+  app.enableShutdownHooks();
+  const host = config.SERVER_HOST;
+  const port = config.SERVER_PORT;
 
-  // 注册视图引擎, 渲染 client 目录下的 html 文件
-  app.setBaseViewsDir(join(process.cwd(), 'dist/client'));
-  app.setViewEngine('html');
-  app.engine('html', hbsExpressEngine);
+  // Production serves the same assets built by Vite; development uses its proxy.
+  app.useStaticAssets(join(process.cwd(), 'dist/client'), { index: false });
 
   await app.listen(port, host);
-  logger.log(`Server running on ${host}:${port}`);
-  logger.log(`API endpoints ready at http://${host}:${port}/api`);
+  diagnostic({ level: 'info', operation: 'startup', result: 'ready' });
 }
 
-bootstrap();
+bootstrap().catch((error: Error) => {
+  diagnostic({ level: 'error', operation: 'startup', result: error.name === 'ConfigurationError' ? 'configuration_rejected' : 'dependency_or_schema_rejected', hint: error.name === 'ConfigurationError' ? 'configuration' : 'database' });
+  process.exitCode = 1;
+});
