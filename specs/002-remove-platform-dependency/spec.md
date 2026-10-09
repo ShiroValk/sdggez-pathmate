@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Ready for Implementation（规格、计划、67项任务及需求质量审阅已完成；实施及强制验收尚未完成，不表示迁移已验收）
+**Status**: Implemented with documented limitations（截至 2026-10-09，T001–T076 已完成，包含 converge 后 T068–T076 的补充实施及适用补验；最终记录为 9 套件 22 项集成测试及 lint 通过。历史高德 Key 处置按用户决定暂缓，部分浏览器定位仍有环境限制，不声明完整规格全部达标；当前证据以 [verification.md 最终补验](verification.md#2026-10-09-最终补验) 为准）
 
 **Governing Constitution**: [PathMate Constitution v1.0.1](../../.specify/memory/constitution.md)
 

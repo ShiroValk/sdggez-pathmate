@@ -170,3 +170,78 @@ db:verify -- --database pathmate_restore_before0001，node scripts/verify-baseli
 均在existing_app使用npm.cmd run；restore只创建新库、撤销旧会话、不切换连接，0000使用匹配归档。
 容器/磁盘空间、建库/文件权限、原连接和旧构建必须可用；发生失败不继续启动，不删除卷。
 恢复后的重新登录与升级后新资料的单独隔离不是可省略步骤，不能把恢复旧点声明为无数据损失。
+
+## 002续验：零值和无记录的真实页面（2026-10-08）
+
+先完成构建并配置独立`DATABASE_URL_TEST`；不得指向开发库或恢复库。关闭其他占用3102的测试进程，在`existing_app`启动真实Nest测试服务和专属合成账号：
+
+```powershell
+node --import tsx tests/integration/vitals-ui.fixture.ts
+```
+
+保持该终端运行，在另一个PowerShell读取仅含合成账号标识的状态文件：
+
+```powershell
+Get-Content .local-validation/vitals-ui-002-state.json
+```
+
+在桌面浏览器打开状态中的`base`加`/memopath`，选择家属端，使用其中`account`和固定测试密码`Synthetic123!`登录，进入“查看生命體徵”。初始真实记录步数为0，预期显示`0`。用下面命令依次切换测试记录，每次从主页重新进入体征页使页面重新请求真实API：
+
+```powershell
+Set-Content .local-validation/vitals-ui-002-control.json '{"steps":1250}' -Encoding UTF8
+Set-Content .local-validation/vitals-ui-002-control.json '{"steps":null}' -Encoding UTF8
+```
+
+正数预期显示`1,250`；无记录预期显示`--`和无趋势数据，不显示健康结论。记录由夹具直接写入独立测试库，用于已有读取语义验收，不代表真实设备采集。结束时必须执行下面命令，等待原终端输出清理成功；仅删除本夹具的合成账号及其记录并停止3102服务，不删除开发数据或Docker卷：
+
+```powershell
+Set-Content .local-validation/vitals-ui-002-control.json '{"finish":true}' -Encoding UTF8
+```
+
+地点/设置失败验收如需短暂停止应用，应先通知正在验收的用户，保持数据库运行，完成后恢复3000并检查HTTP200。不要在服务停机期间把浏览器“拒绝连接”记录为地图故障。受限代理进程不能访问Docker或`os.userInfo()`时，分别记录代理执行环境阻塞和用户PowerShell结果；采用有权限的正常执行环境复检，不注入用户信息模拟值或修改业务依赖。
+
+## 目的地名称无法解析时的路线验收
+
+在能取得真实定位的Edge刷新页面，进入家属主页→叫车接送排程→已保存行程的“导航前往”。路线页地图上方提供“搜索并选择高德目的地”输入框；名称解析失败时按提示重新搜索并明确选择真实地点。高德返回无坐标候选项时会拒绝该项，保留输入和结果供重新选择，不补0/0、不自动选同名项。例如实际搜索“法国医院”返回无坐标同名提示及带地址的“圣德肋撒医院／香港九龙城区／太子道327号”，须由验收者核对并选择目标。
+
+有效选择只用于当前导航，保持保存的行程名称及公共API合同不变；重新进入行程时仍需解析/确认目的地。记录是否出现真实路线线条、距离、时间，再点“重新规划路线”复验真实定位及规划。地图脚本加载、搜索返回或选中标题变化都不能单独判定路线通过。内置浏览器权限拒绝而Edge成功时分别记录，不模拟定位或自动授权。
+
+## 收束验收夹具与真实数据库重启
+
+在 `existing_app` 已完成构建、独立 `DATABASE_URL_TEST` 已配置且3102/3103未占用时运行：
+
+```powershell
+node --import tsx tests/integration/convergence-ui.fixture.ts
+```
+
+读取 `.local-validation/convergence-ui-state.json`，在桌面浏览器打开其中 `base` 加 `/memopath`。`accounts` 前两项为家属、后两项为长者，固定合成密码为 `Synthetic123!`。夹具使用真实 Nest 服务、认证和测试库；3103仅转发真实响应。控制文件 `.local-validation/convergence-ui-control.json` 支持以下独立场景，修改后再操作页面：
+
+```powershell
+# 连续设置保存：延迟真实响应，不伪造成功
+Set-Content .local-validation/convergence-ui-control.json '{"delayPath":"/api/memopath/settings","delayMs":2000}'
+# 明确注入失败，核对未保存状态、草稿和重试
+Set-Content .local-validation/convergence-ui-control.json '{"failPath":"/api/memopath/settings"}'
+# 恢复正常响应
+Set-Content .local-validation/convergence-ui-control.json '{}'
+# 重启本夹具拥有的应用进程，保持测试库运行
+Set-Content .local-validation/convergence-ui-control.json '{"restart":1}'
+# 以测试页CSP阻止高德请求，其他同源业务仍使用真实服务
+Set-Content .local-validation/convergence-ui-control.json '{"blockMap":true}'
+# 结束时等待原终端输出合成资源清理成功
+Set-Content .local-validation/convergence-ui-control.json '{"finish":true}'
+```
+
+延迟最多15秒，可针对当前长者的实际API路径测试切换账号/长者前发起、切换后返回的响应。夹具结束仅删除本次随机账号及其关联测试资源，不操作开发账号、开发服务或数据库卷。无地图/无效合成Key页面可通过 `frontend` 选项使用 `.local-validation/client-no-map` / `client-invalid-map` 中另行构建的产物；没有这些产物时不能把文件错误称作地图验收结果。替代构建使用绝对 `--outDir`，因为 Vite 根目录为 `client`；真实 `.env.local` 不修改。
+
+验证迟到401/403时使用8秒延迟，低于客户端15秒超时；先在真实测试库使专属合成会话过期或经授权撤销专属照护关联，再发起实际请求，在8秒内退出并登录另一个账号。状态文件的 `responseCounts` 只含路径/方法/状态码，用来核对上游真实错误；等待延迟结束后，新会话仍能读取受保护资料才判通过。将延迟设为15秒只能说明超时边界，不能单独证明401/403被前端收到。权限变更和清理仅限验收夹具本次资源，并遵守所需具体授权。
+
+搜索旧请求边界：输入“法国医院”，等待300毫秒防抖结束，确认其真实JSONP请求尚未返回，再将文字换成“圣德肋撒医院”；旧请求返回后输入及建议应只匹配新文字。四个可见入口为常去地点、行程目的地、长者主页和路线页。只观察公开关键词和界面，不输出完整第三方URL/Key，不生成成功响应或测试坐标。夹具控制文件读取允许短暂写入中间态，但持续无效JSON会明确失败；异常清理必须先清除本次账号拥有的全部长者，再删除合成账号，避免照护目标外键因行顺序留下账号。
+
+数据库正常重启验收与定位缓存边界检查分别运行：
+
+```powershell
+node --import tsx tests/integration/database-restart.fixture.ts
+node --import tsx --test tests/integration/position-cache.test.ts
+```
+
+重启夹具仅使用本机已有的固定摘要 PostgreSQL17官方镜像，创建随机名称容器和独立临时数据卷，明确绑定临时本机端口；不挂载已有卷。普通和真实演示账号分别新增/编辑地点，第一次数据库重启后读回并删除，第二次重启后确认删除仍生效。数据库就绪与应用连接池重连分别有界检查；短暂503是失败响应，不能伪装成功。结束会删除该次新建容器及其临时卷，因此运行前须有针对该清理范围的授权；本次用户已明确授权，原 `existing_app-db-1` 及其卷不在清理范围。缓存测试只检查时间边界，不生成坐标或替代真实浏览器定位。

@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  Delete,
+  Patch,
   Param,
   Post,
   Put,
@@ -17,13 +19,14 @@ import type {
   MemoPathMovementListResponse,
   MemoPathPlaceListResponse,
   MemoPathPlaceRecord,
+  MemoPathMessageResponse,
   MemoPathSettingResponse,
   MemoPathTripListResponse,
   MemoPathTripRecord,
   MemoPathVitalSummaryResponse,
 } from '@shared/api.interface';
 import { MemoPathFamilyService } from './family.service';
-import { MemoPathGeofenceDto, MemoPathPlaceDto, MemoPathSettingDto, MemoPathTripDto } from './dto';
+import { MemoPathGeofenceDto, MemoPathPlaceDto, MemoPathPlaceUpdateDto, MemoPathSettingDto, MemoPathTripDto } from './dto';
 import { MemoAuthedRequest, MemoPathSessionGuard } from './memopath-session.guard';
 import { ResourceUuidPipe, resourceUuid } from './resource-uuid.pipe';
 
@@ -126,6 +129,24 @@ export class MemoPathFamilyController {
   ): Promise<MemoPathPlaceRecord> {
     resourceUuid(dto.elderId);
     return this.familyService.addPlace(req.memoAccount, dto);
+  }
+
+  @Patch('places/:id')
+  async updatePlace(
+    @Req() req: MemoAuthedRequest,
+    @Param('id', new ResourceUuidPipe()) id: string,
+    @Body() dto: MemoPathPlaceUpdateDto,
+  ): Promise<MemoPathPlaceRecord> {
+    return this.familyService.updatePlace(req.memoAccount, id, dto);
+  }
+
+  @Delete('places/:id')
+  async deletePlace(
+    @Req() req: MemoAuthedRequest,
+    @Param('id', new ResourceUuidPipe()) id: string,
+  ): Promise<MemoPathMessageResponse> {
+    await this.familyService.deletePlace(req.memoAccount, id);
+    return { message: '已删除常去地点' };
   }
 
   @Get('alerts')

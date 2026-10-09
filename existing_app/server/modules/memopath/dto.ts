@@ -328,6 +328,38 @@ export class MemoPathPlaceDto {
   lat?: number;
 }
 
+/** Patch for an existing place; ownership is resolved from the locked row. */
+export class MemoPathPlaceUpdateDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString() @IsNotEmpty() @MaxLength(100)
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  label?: string;
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString() @MaxLength(16)
+  icon?: string;
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString() @IsIn(['frequent', 'beacon'])
+  placeType?: 'frequent' | 'beacon';
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString() @IsIn(['safe', 'strange'])
+  beaconStatus?: 'safe' | 'strange';
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsString() @MaxLength(255)
+  address?: string;
+
+  @ValidateIf((object, value) => value !== undefined || object.lat !== undefined)
+  @IsNumber() @Min(-180) @Max(180)
+  lng?: number;
+
+  @ValidateIf((object, value) => value !== undefined || object.lng !== undefined)
+  @IsNumber() @Min(-90) @Max(90)
+  lat?: number;
+}
+
 /** Care codes remain body-only; no lookup by guessed identity grants access. */
 export class MemoPathCareInviteDto {
   @IsString() @IsNotEmpty() elderId!: string;

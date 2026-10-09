@@ -71,6 +71,46 @@ function connection(config, database) {
   if (!/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/.test(database)) fail('Invalid local database identifier.');
   url.pathname = '/' + database; return url.toString();
 }
+const RESTORE_SPACE_FLOOR = 64 * 1024 * 1024;
+function requiredRestoreSpace(archiveBytes) {
+  if (!Number.isSafeInteger(archiveBytes) || archiveBytes <= 0) fail('Restore archive is empty or has an invalid size.');
+  // Compressed PostgreSQL dumps can expand substantially; reserve a conservative
+  // 3x archive estimate plus fixed catalog/WAL headroom. This is a preflight,
+  // not a guarantee about the database's exact expanded size.
+  const required = archiveBytes * 3 + RESTORE_SPACE_FLOOR;
+  if (!Number.isSafeInteger(required)) fail('Restore archive size exceeds the supported preflight range.');
+  return required;
+}
+function assertRestoreSpace(availableBytes, requiredBytes, location) {
+  if (!Number.isSafeInteger(availableBytes) || availableBytes < requiredBytes) {
+    fail(`Restore stopped before database copy: ${location} free space is insufficient or could not be verified; required estimate ${requiredBytes} bytes.`);
+  }
+}
+function verifyRestorePrerequisites(file, id) {
+  let archive;
+  try {
+    archive = fs.lstatSync(file);
+    if (!archive.isFile() || archive.isSymbolicLink() || archive.size <= 0) fail('Restore archive must be a readable non-empty regular file.');
+    fs.accessSync(file, fs.constants.R_OK);
+    fs.accessSync(backupRoot, fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK);
+    const local = fs.statfsSync(backupRoot);
+    assertRestoreSpace(local.bavail * local.bsize, 1024 * 1024, 'local backup directory');
+  } catch (error) {
+    if (error instanceof require('./db.cjs').MigrationError) throw error;
+    fail('Restore stopped before database copy: archive or local backup directory access could not be verified.');
+  }
+  const containerAccess = spawnSync('docker', ['exec', id, 'gosu', 'postgres', 'test', '-w', '/var/lib/postgresql/data'], { cwd: root, encoding: 'utf8', timeout: 15000 });
+  if (containerAccess.error || containerAccess.status !== 0) fail('Restore stopped before database copy: PostgreSQL data-directory write access could not be verified for the database user.');
+  const available = ['/tmp', '/var/lib/postgresql/data'].map(location => {
+    const output = official(['exec', id, 'df', '-Pk', location]);
+    const row = output.split(/\r?\n/u).slice(1).find(line => line.trim().length > 0)?.trim().split(/\s+/u);
+    return row && row.length >= 4 ? Number(row[3]) * 1024 : Number.NaN;
+  });
+  if (available.length === 0 || available.some(value => !Number.isSafeInteger(value))) fail('Restore stopped before database copy: Docker temporary/data-volume free space could not be verified.');
+  const required = requiredRestoreSpace(archive.size);
+  assertRestoreSpace(Math.min(...available), required, 'Docker temporary/data volume');
+  return { archiveBytes: archive.size, requiredBytes: required, availableBytes: Math.min(...available) };
+}
 function readManifest(file) {
   let manifest;
   try { manifest = JSON.parse(fs.readFileSync(file + '.json', 'utf8')); } catch { fail('Backup manifest missing or invalid.'); }
@@ -132,8 +172,10 @@ async function verify(db, manifest, revoked) {
 }
 async function restoreArchive(config, file, manifest, database, transient = false) {
   if (!/^pathmate_restore_[a-z0-9_]{1,45}$/.test(database)) fail('Restore target must be a new pathmate_restore_* database.');
+  const id = container();
+  verifyRestorePrerequisites(file, id);
   const admin = postgres(connection(config, 'postgres'), { max: 1 });
-  let db; let created = false; let verified = false; const id = container();
+  let db; let created = false; let verified = false;
   const temporary = '/tmp/pathmate_restore_' + crypto.randomUUID().replaceAll('-', '') + '.dump';
   const user = decodeURIComponent(new URL(config.DATABASE_URL).username);
   try {
@@ -202,4 +244,4 @@ async function run(command, options, config) {
     require('./db.cjs').report('db_verify','passed',{database:options[1],version:manifest.schemaVersion,sessionsRevoked:true});
   }
 }
-module.exports = { run, state, verify };
+module.exports = { run, state, verify, requiredRestoreSpace, assertRestoreSpace, verifyRestorePrerequisites };

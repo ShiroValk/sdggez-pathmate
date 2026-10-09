@@ -5,6 +5,23 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { api, startTestServer } from './helpers';
 import { businessFixture } from './business-fixtures';
+
+test('real vitals API distinguishes zero, positive steps and no record', async () => {
+  const f = await businessFixture();
+  try {
+    for (const steps of [0, 1250]) {
+      await f.db`DELETE FROM memopath_vital WHERE elder_id=${f.elder.id}`;
+      await f.db`INSERT INTO memopath_vital(elder_id,heart_rate,blood_oxygen,temperature,steps,_created_by,_updated_by) VALUES(${f.elder.id},70,98,'36.5',${steps},${f.a.accountId},${f.a.accountId})`;
+      const response = await api(f.server.base, '/vitals?elderId=' + f.elder.id, { token: f.a.token });
+      assert.equal(response.status, 200);
+      assert.equal(response.body.latest.steps, steps);
+    }
+    await f.db`DELETE FROM memopath_vital WHERE elder_id=${f.elder.id}`;
+    const missing = await api(f.server.base, '/vitals?elderId=' + f.elder.id, { token: f.a.token });
+    assert.equal(missing.status, 200);
+    assert.equal(missing.body.latest, null);
+  } finally { await f.close(); }
+});
 test('all existing editable resources survive restart with field meaning intact', async () => {
   const f = await businessFixture(); let restarted: Awaited<ReturnType<typeof startTestServer>> | undefined;
   const call = (route: string, method = 'GET', body?: unknown) => api(restarted?.base ?? f.server.base, route, { token: f.a.token, method, body });
@@ -61,4 +78,30 @@ test('all existing editable resources survive restart with field meaning intact'
     await f.db.unsafe('DROP FUNCTION IF EXISTS persistence_fixture_reject()');
     await f.close();
   }
+});
+
+test('place edit and delete are authorized persistent service operations', async () => {
+  const f = await businessFixture(); let restarted: Awaited<ReturnType<typeof startTestServer>> | undefined;
+  try {
+    const created = await api(f.server.base, '/places', { token: f.a.token, method: 'POST', body: {
+      elderId: f.elder.id, label: 'Before edit', address: 'Before address', icon: '📍', placeType: 'frequent', beaconStatus: 'safe', lng: 114.1, lat: 22.3,
+    } });
+    assert.equal(created.status, 201);
+    const patch = { label: 'After edit', address: 'After address', icon: '🏥', lng: 0, lat: 0 };
+    const updated = await api(f.server.base, `/places/${created.body.id}`, { token: f.a.token, method: 'PATCH', body: patch });
+    assert.equal(updated.status, 200); assert.equal(updated.body.id, created.body.id);
+    for (const [key, value] of Object.entries(patch)) assert.equal(updated.body[key], value);
+    assert.equal((await api(f.server.base, `/places/${created.body.id}`, { token: f.b.token, method: 'PATCH', body: { label: 'Denied' } })).status, 403);
+    assert.equal((await api(f.server.base, `/places/${created.body.id}`, { token: f.b.token, method: 'DELETE' })).status, 403);
+    assert.equal((await api(f.server.base, `/places/${created.body.id}`, { token: f.a.token, method: 'PATCH', body: {} })).status, 400);
+    const audit = await f.db`SELECT _updated_by,lng,lat FROM memopath_place WHERE id=${created.body.id}`;
+    assert.equal(audit[0]._updated_by, f.a.accountId); assert.equal(audit[0].lng, 0); assert.equal(audit[0].lat, 0);
+    await f.server.close(); restarted = await startTestServer();
+    const afterRestart = await api(restarted.base, `/places?elderId=${f.elder.id}`, { token: f.a.token });
+    const persisted = afterRestart.body.items.find((item: { id: string }) => item.id === created.body.id);
+    assert.equal(persisted.label, 'After edit'); assert.equal(persisted.address, 'After address');
+    assert.equal((await api(restarted.base, `/places/${created.body.id}`, { token: f.a.token, method: 'DELETE' })).status, 200);
+    const removed = await api(restarted.base, `/places?elderId=${f.elder.id}`, { token: f.a.token });
+    assert.ok(!removed.body.items.some((item: { id: string }) => item.id === created.body.id));
+  } finally { await restarted?.close(); await f.close(); }
 });

@@ -252,3 +252,48 @@ Polish的T063文档与T064审查工具可并行，前提是全部故事已完成
 - 不引入旧数据导入、平台身份映射、多家属协同、短信服务、真实定位采集/告警投递/通知或全PRD实现。
 - 真实凭据只注入不提交的配置；验证日志不回显值，地图Key缺失不阻断其他独立能力。
 - 任务分布：Setup 7、Foundational 12、US1 7、US2 8、US3 12、US4 8、US5 8、Polish 5。
+
+## Phase 10: Convergence
+
+日期：2026-10-08（Asia/Hong_Kong）。本轮仅评估当前代码并追加任务，不运行业务验收、不修改应用代码、spec.md、plan.md、既有任务或清单标记；T001–T067的原勾选状态作为历史记录保留，不作为当前实现已完全合格的证据。前后置extensions配置不存在。前置检查脚本被当前PowerShell执行策略阻止，未更改策略；以只读方式核对`.specify/feature.json`指向002且spec/plan/tasks齐全。既有implement记录存在，满足converge阶段前提；不使用Git比较或重新扫描历史。
+
+本轮核对25条FR、10项SC、25个用户故事验收场景、67项既有任务、12项计划决策（既有框架/服务职责、Windows宿主与Docker底座、官方锁定依赖、配置、会话、归属、照护关联、输入、持久化、请求/日志/启动、演示/地图、迁移恢复），以及章程7项原则与3项既有基线。以下是静态发现及待完成工作，不是本轮运行测试通过结论。
+
+### 发现分类及执行边界
+
+| ID | 类别 | Gap type | 严重性 | 当前代码或证据依据 | 对应任务 |
+| --- | --- | --- | --- | --- | --- |
+| C01 | 实现缺口 | contradicts | CRITICAL | `memopath-engine.ts:1432`的confirmPlace先写本地记录、忽略服务端返回ID，捕获addPlace失败后仍清草稿并提示保存；编辑跳过API，`deletePlace:1483`只删内存；FamilyController仅有GET/POST places | T068 |
+| C02 | 实现缺口 | contradicts | CRITICAL | `memopath-engine.ts:1414`的pickPlaceTip把高德缺失location转为0/0并允许confirmPlace持久化；这不同于旧API明确约定的缺坐标响应占位0/0，不应改变该兼容约定 | T069 |
+| C09 | 验收证据不足且结论过宽 | contradicts | CRITICAL | `verification.md`最终FR-008/010/011、SC-004等概括通过与C01–C05的当前分支不一致；9套件18项的既有结果存在，但不能证明未覆盖的前端地点编辑/删除/失败及延迟响应隔离 | T070 |
+| C03 | 实现缺口 | partial | HIGH | `memopath-engine.ts:670`的loadScreenData只在care/home成功分支检查identityGeneration；contacts/trips/settings/elders/safety/overview/vitals与catch及多项保存回调未统一检查，旧响应可能回填新身份或旧401清除新会话；切换长者也没有完整请求上下文检查 | T071 |
+| C04 | 实现缺口 | partial | HIGH | `memopath-engine.ts:1332`的saveSetting立即替换state.setting；失败只toast，未单列已确认值/待保存值及明确重试入口，连续整体配置保存未串行或处理乱序 | T072 |
+| C05 | 实现缺口 | partial | HIGH | `memopath-engine.ts:1400`的suggestPlaceSearch在无Key、无效Key、网络错误时只logger.warn；用户只有空建议列表，无法区分失败与无结果 | T073 |
+| C06 | 实现缺口 | partial | MEDIUM | `memopath-amap.ts:149`的getCurrentPosition在cachedPosition存在时永远直接返回；无取得时间/过期检查，disposeMaps不清定位缓存，重试/重新规划不一定发起新的真实定位 | T074 |
+| C07 | 实现缺口 | partial | MEDIUM | `scripts/recovery.cjs:133`的restoreArchive校验归档/新目标后复制并建库，未显式预检本机/容器空间与必要访问前提；official仅在命令失败后给通用提示；T058要求执行前核对这些前提 | T075 |
+| C08 | 实现缺口 | partial | MEDIUM | `memopath-engine.ts`的vitals使用`latest.steps > 0`判断有数据，真实记录steps=0显示`--`；不应把零步数当无记录或增加健康结论 | T076 |
+
+另行记录，**不作为代码缺陷或新增秘密修复任务**：
+
+- 历史Key：继续执行用户既有暂缓决定，不轮换、不停用、不改写历史、不输出Key。本轮不读取私人配置或Git历史；FR-014/SC-008历史处置部分保持“用户暂缓/未完成”，既有外部配置读取和无Key行为另判。以后实施不得为了让验收全绿而将暂缓标为通过。
+- 浏览器环境：按用户2026-10-08说明，VS Code会话的浏览器验收阻塞按工具/宿主环境记录；需要浏览器时先通知用户切换Codex桌面端，切换完成后再核对实际连接。不把该情况归因于PathMate实现，也不未经同意寻找替代验收通道。
+- 定位权限：按用户说明，桌面端权限不足时通知用户手动打开浏览器检查Windows与站点定位权限；原内置浏览器超时、Chrome连接阻塞及用户Edge手动通过各保留其证据来源，不根据用户说明把所有既有超时改写成已证实的同一根因。未复检前仍记环境阻塞，不模拟定位、不自动授权、不要求用户发送坐标或密钥。
+
+### 追加实施任务
+
+- [x] T068 [US3] **CRITICAL / C01 / 实现缺口**：在`existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`的confirmPlace/openEditPlace/deletePlace及`memopath-api.ts`、`existing_app/server/modules/memopath/family.controller.ts`、`family.service.ts`补齐已存在地点页面新增、编辑、删除的真实持久化：仅在真实服务成功后确认保存/删除并采用返回的真实UUID；失败保留可重试草稿和原已保存列表，显示真实错误，不清草稿或返回本地模拟成功；显式前端演示仍仅改内存并标明未写库。先核对已有页面基线，为缺少的持久化操作形成最小增量合同，遵循Family/Elder授权边界，保持既有25条API及合法输入响应兼容；若确需破坏既有合法契约，先按章程V提交方案由用户确认。同步`contracts/api.md`及模块职责说明，补普通/演示账号刷新、重登、应用与数据库正常重启读回，以及停库/断网、角色越权和跨账号拒绝的真实验收。依据FR-008/010/011/015/016、US3/AC3、US4/AC4、章程I、既有T042/T045/T050（contradicts）。
+- [x] T069 [US3] **CRITICAL / C02 / 实现缺口**：在`existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`的pickPlaceTip/confirmPlace及`memopath-amap.ts`使缺少高德location的搜索结果保持“坐标未知”，不得补0/0作为真实搜索结果写库；必要时使用已批准高德能力解析并明确成功/失败，解析失败保留草稿、拒绝将虚构坐标当真实值保存。区分真实合法零坐标、未提供坐标和旧API的0/0占位约定，保持受支持契约；不模拟定位、不改换地图服务。验证无location/解析失败无错误写入、有效坐标原值读回及合法零值兼容，同步边界说明。依据FR-008/014/015/016、US3/AC3、章程I、既有T037/T042/T053（contradicts）。
+- [x] T070 **CRITICAL / C09 / 验收证据不足**：先在`specs/002-remove-platform-dependency/verification.md`追加当前发现与待复验状态，修订其当前总览/FR/SC结论，撤回对未覆盖或已发现缺口的全流程通过声明，保留原日期的9套件18项及用户Edge手动路线证据，不删历史失败。为T068/T069/T071–T076建立真实库与页面验收记录：明确构建/源码标识、命令/步骤、合成输入、预期、实际、脱敏证据、清理范围；补延迟响应身份切换、地点编辑/删除/失败/坐标缺失、设置失败/连续保存、地图搜索失败、定位缓存重试、恢复前提失败与零步数。修复后只复验受影响检查；最终受影响构建/权限/兼容/持久化及场景未通过时不得声明完整交付。浏览器前通知用户从VS Code切换桌面端，定位权限问题通知其手动打开浏览器检查，再按实际结果区分代理验收、用户手动验收、证据不足及环境阻塞；需要替代方案时先征求同意。同步`quickstart.md`与必要运行说明及25FR/10SC/DEP/新增任务证据索引，自定义需求清单标记不动，历史Key继续暂缓且不新增轮换/历史扫描或清理要求，不变更001范围。依据FR-001/020/021/022、SC-001/004/005/006/008/009、US5/AC1、章程II、既有T054/T063/T065–T067（contradicts）。
+- [x] T071 [US3] **HIGH / C03 / 实现缺口**：在`existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`统一绑定所有异步读写、catch、后续重载及必要地图/语音回调的身份、模式、当前长者与组件存活上下文，补全clearIdentityData和切换长者后的失效检查；旧账号/旧模式/旧长者响应不得回填状态、触发新身份写请求或清除较新的有效会话，失效旧401/403也不得操作新会话。当前授权撤销/删除后的失败应清除相应受保护缓存，不能把旧数据当可继续访问资料；不新增实时远端追踪或持续监听。用真实A/B/E及demo账号、受控请求延迟/顺序验证退出后迟到响应、跨账号/模式切换、切换长者、撤销关联与迟到失败；故障/延迟注入只用于测试，不代替真实认证/业务响应。依据FR-005/006/010/015、SC-003/009、US3/AC7、既有T043/T052（partial）。
+- [x] T072 [US3] **HIGH / C04 / 实现缺口**：在`existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`的saveSetting及相关设置视图区分已确认服务端值和待保存修改；失败明确标记未保存、保留修改并提供重试，不把仅内存设置显示为已持久化，不在导航重载时悄悄丢失可重试输入；处理快速连续语言/语音/锁定设置保存，避免旧整体配置或乱序响应覆盖较新修改，结合T071上下文保护。保持前端演示仅内存与真实账号设置归属，验证停库/断网、恢复重试、连续切换及刷新/重登后值一致，补模块说明和T070证据。依据FR-008/010/011/015、SC-004、Edge Case断网保留输入、既有T025/T050/T052（partial）。
+- [x] T073 [US4] **HIGH / C05 / 实现缺口**：在`existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`的suggestPlaceSearch及相关搜索视图统一缺Key、Key无效、脚本/网络/超时失败的脱敏可操作反馈，区分请求失败与成功但无结果；保留搜索输入，失效/较旧搜索不得覆盖新输入的结果，不使地图故障阻断其他独立页面。用无Key与无效合成配置、真实请求失败验证全部受支持搜索入口，不输出真实Key或完整第三方URL；有效地图/定位页面按T070的桌面端与手动权限交接流程验收。依据FR-014、SC-005、US1/AC2、既有T031/T050（partial）。
+- [x] T074 [US4] **MEDIUM / C06 / 实现缺口**：在`existing_app/client/src/pages/MemoPathPage/memopath-amap.ts`及引擎重试/重新规划入口记录定位缓存取得时间并限制其有效期；明确重试使失效缓存不再直接返回，切换/销毁及新的定位失败处理不能把永久缓存当当前设备位置。保持用户触发、真实浏览器定位、权限失败明确不可用及不新增位置上传/持续跟踪的基线。用明确时间/缓存状态的边界检查验证过期和重试路径；真实定位验收先通知用户手动打开浏览器检查权限，未取得真实位置时记录阻塞，不以模拟坐标判通过，补行为说明。依据FR-014/016/023、plan地图/请求决策、既有T031/T053（partial）。
+- [x] T075 [US5] **MEDIUM / C07 / 实现缺口**：在`existing_app/scripts/recovery.cjs`及`existing_app/server/database/migrations/README.md`、运行说明落实T058要求的恢复执行前检查：明确归档可读性、本机/容器必要访问条件与可用空间检查或有依据的容量前提，检查失败在建库/复制/恢复前明确停止，不仅依赖pg_restore失败后的通用错误；不能证明的前提保留未验证限制。以受控失败条件验证不可读/无访问能力/不足空间的诊断及源库、原卷、应用连接不变，不真实填满用户磁盘或修改用户目录权限；继续仅创建新恢复目标、撤销恢复会话并保留失败诊断。补真实正常恢复和受影响migrations复验及T070证据，不扩大为新备份平台。依据FR-019/020、US5/AC2、plan恢复前提、既有T058/T060/T061（partial）。
+- [x] T076 [US3] **MEDIUM / C08 / 实现缺口**：在`existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`的vitals零步数显示分支区分真实记录steps=0与latest=null/缺失，不改变既有API字段或把零值作健康判断。复核相关显示分支是否同样抹去合法数据，限定修复为已有读取语义，不新增采集/医疗判断；使用来源明确的隔离测试记录分别验证0、正数和无记录，通过真实API读取后在页面核对，记录数据来源与清理及T070证据。依据FR-008/016、US3/AC3、既有T013/T042/T053（partial）。
+
+### 本阶段依赖与完成条件
+
+- T070分两次执行：先登记缺口并纠正当前结论；T068/T069/T071–T076实际修复并完成对应验证后，再收束验收结论。证据不足不得用新增文案或仅通过编译消除。
+- 共享`memopath-engine.ts`的任务串行；T068形成地点操作合同/持久化后执行T069，T071先落实异步上下文再整合T072–T074及T076。T075仅操作独立恢复测试目标，不与持久化/重启测试争用数据库。
+- 地点与设置修复均需成功、失败及重启证据；权限/隔离仍在服务端独立验证，不用隐藏按钮替代。所有新增条目初始未勾选，原67项不重写、不重排、不取消勾选；本阶段共9项，编号T068–T076。
+- 新增任务时结果为`tasks_appended`；2026-10-09实施及适用补验完成，证据见verification.md最终补验。任务完成不代表历史Key暂缓项达标，不声明完整规格验收全部通过。浏览器/定位阻塞与用户暂缓的历史Key单列，不能替代实际代码缺口，也不构成未经同意使用替代方案的授权。

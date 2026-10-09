@@ -47,6 +47,18 @@ interface MemoTripForm {
   scheduleMode: 'auto' | 'manual';
 }
 
+interface IdentityContext {
+  generation: number;
+  token: string;
+  role: MemoPathRole | null;
+  demoMode: boolean;
+  screen: string;
+  elderId: string;
+  elderGeneration: number;
+  viewGeneration: number;
+  viewRole: MemoPathRole;
+}
+
 interface MemoState {
   role: MemoPathRole;
   screen: string;
@@ -64,6 +76,8 @@ interface MemoState {
   contacts: MemoPathContactRecord[];
   trips: MemoPathTripRecord[];
   setting: MemoPathSettingConfig;
+  settingPersisted: MemoPathSettingConfig;
+  settingSaveStatus: 'saved' | 'saving' | 'failed' | 'demo';
   geofence: MemoPathGeofenceRecord | null;
   places: MemoPathPlaceRecord[];
   alerts: MemoPathAlertRecord[];
@@ -91,7 +105,8 @@ interface MemoState {
   homeTips: AmpTip[];
   placeSearchText: string;
   placeTips: AmpTip[];
-  placeDraft: { label: string; address: string; lng: number; lat: number } | null;
+  placeSearchStatus: 'idle' | 'searching' | 'empty' | 'missing-config' | 'error';
+  placeDraft: { label: string; address: string; lng: number | null; lat: number | null; locationResolved: boolean; coordinatesKnown: boolean } | null;
   placeIcon: string;
   editingPlaceId: string;
   cabFeedback: 'yes' | 'no';
@@ -317,6 +332,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     contacts: [],
     trips: [],
     setting: { language: 'cantonese', voiceMode: 'default_on', lockLayout: false },
+    settingPersisted: { language: 'cantonese', voiceMode: 'default_on', lockLayout: false },
+    settingSaveStatus: 'saved',
     geofence: null,
     places: [],
     alerts: [],
@@ -344,6 +361,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     homeTips: [],
     placeSearchText: '',
     placeTips: [],
+    placeSearchStatus: 'idle',
     placeDraft: null,
     placeIcon: '📍',
     editingPlaceId: '',
@@ -360,6 +378,14 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   let careBusy = false;
   let active = true;
   let identityGeneration = 0;
+  let screenLoadSequence = 0;
+  let authAttemptSequence = 0;
+  let elderGeneration = 0;
+  let viewGeneration = 0;
+  let routeSequence = 0;
+  const suggestionSequences = { home: 0, map: 0, destination: 0 };
+  let settingSaveVersion = 0;
+  let settingSaveQueue: Promise<void> = Promise.resolve();
 
   let voiceHandle: VoiceRecognizerHandle | null = null;
   let voiceHoldActive = false;
@@ -383,6 +409,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   let destSearchTimer = 0;
   let homeSearchTimer = 0;
   let placeSearchTimer = 0;
+  let placeSearchSequence = 0;
   let homePosCache: { label: string; pos: AMapPoint } | null = null;
   let toastTimer = 0;
   let otpTimer = 0;
@@ -428,7 +455,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function numOrDash(value: number | null | undefined): string {
-    if (value === null || value === undefined || value === 0 || !Number.isFinite(value)) return '--';
+    if (value === null || value === undefined || !Number.isFinite(value)) return '--';
     return String(value);
   }
 
@@ -472,8 +499,9 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     state.alerts = []; state.movements = []; state.vitals = { latest: null, trend: [] }; state.vitalsLoaded = false;
     state.geofence = null; state.currentElderId = ''; localStorage.removeItem(ELDER_KEY);
     state.setting = { language: 'cantonese', voiceMode: 'default_on', lockLayout: false };
+    state.settingPersisted = { ...state.setting }; state.settingSaveStatus = 'saved'; settingSaveVersion += 1;
     state.elderForm = { name: '' }; state.editingElderId = ''; state.tripForm = { destination: '', tripDate: '', startTime: '', scheduleMode: 'auto' };
-    state.newPlaceLabel = ''; state.placeDraft = null; state.editingPlaceId = ''; state.placeSearchText = ''; state.homeSearchText = '';
+    state.newPlaceLabel = ''; state.placeDraft = null; state.editingPlaceId = ''; state.placeSearchText = ''; state.placeSearchStatus = 'idle'; placeSearchSequence += 1; state.homeSearchText = '';
     state.mapTips = []; state.destTips = []; state.homeTips = []; state.placeTips = []; state.navDestination = ''; state.navPos = null;
     state.regPhone = ''; state.regOtp = ''; state.regOtpIssued = ''; state.regPassword = ''; state.regPassword2 = ''; state.loginPassword = '';
     homePosCache = null; disposeMaps();
@@ -481,7 +509,40 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     window.clearInterval(otpTimer); window.clearTimeout(mapSearchTimer); window.clearTimeout(destSearchTimer); window.clearTimeout(homeSearchTimer); window.clearTimeout(placeSearchTimer);
   }
 
+  function captureIdentityContext(): IdentityContext {
+    return {
+      generation: identityGeneration,
+      token: getToken(),
+      role: authenticatedRole,
+      demoMode: state.demoMode,
+      screen: state.screen,
+      elderId: state.currentElderId,
+      elderGeneration,
+      viewGeneration,
+      viewRole: state.role,
+    };
+  }
+
+  function isIdentityContextCurrent(context: IdentityContext): boolean {
+    return active && context.generation === identityGeneration && context.token === getToken()
+      && context.role === authenticatedRole && context.demoMode === state.demoMode
+      && context.screen === state.screen && context.elderId === state.currentElderId
+      && context.elderGeneration === elderGeneration && context.viewGeneration === viewGeneration
+      && context.viewRole === state.role;
+  }
+
+  function runWithContext(work: () => Promise<void>): void {
+    const context = captureIdentityContext();
+    void work().catch(error => {
+      if (isIdentityContextCurrent(context)) handleApiError(error);
+    });
+  }
+
   function handleApiError(error: unknown): void {
+    const requestToken = typeof error === 'object' && error !== null
+      ? (error as { config?: { headers?: Record<string, unknown> } }).config?.headers?.['x-memopath-token']
+      : undefined;
+    if (typeof requestToken === 'string' && requestToken.length > 0 && requestToken !== getToken()) return;
     if (isUnauthorized(error)) {
       setToken('');
       clearIdentityData();
@@ -489,10 +550,33 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       if (state.screen !== 'login') nav('login');
       return;
     }
+    const status = typeof error === 'object' && error !== null
+      ? (error as { response?: { status?: number } }).response?.status : undefined;
+    if (status === 403) {
+      // A denied/revoked care scope must not leave its old records visible.
+      elderGeneration += 1; screenLoadSequence += 1;
+      state.currentElderId = ''; localStorage.removeItem(ELDER_KEY);
+      state.dashboard = null; state.elders = []; state.contacts = []; state.trips = []; state.places = [];
+      state.alerts = []; state.movements = []; state.geofence = null;
+      state.vitals = { latest: null, trend: [] }; state.vitalsLoaded = false;
+      state.elderForm = { name: '' }; state.editingElderId = '';
+      state.tripForm = { destination: '', tripDate: '', startTime: '', scheduleMode: 'auto' };
+      state.addingPlace = false; state.placeDraft = null; state.editingPlaceId = '';
+      state.homeTips = []; state.mapTips = []; state.destTips = []; state.placeTips = [];
+      state.navDestination = ''; state.navPos = null;
+      careLinks = []; careInvitation = null; carePreview = null; careCode = ''; careTarget = '';
+      homePosCache = null; disposeMaps();
+      render();
+    }
     toast(extractErrorMessage(error));
   }
 
   function nav(screen: string): void {
+    viewGeneration += 1;
+    const authScreens = ['login', 'register1', 'register2', 'register3'];
+    if (state.screen !== screen && (authScreens.includes(state.screen) || authScreens.includes(screen))) {
+      authAttemptSequence += 1;
+    }
     if (state.screen !== screen) state.history.push(state.screen);
     state.screen = screen;
     render();
@@ -500,6 +584,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function back(): void {
+    viewGeneration += 1;
+    authAttemptSequence += 1;
     state.screen = state.history.pop() ?? 'login';
     render();
     void loadScreenData(state.screen);
@@ -516,6 +602,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function setCurrentElder(id: string): void {
+    if (state.currentElderId !== id) elderGeneration += 1;
     state.currentElderId = id;
     localStorage.setItem(ELDER_KEY, id);
   }
@@ -523,7 +610,9 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   async function ensureElderId(): Promise<string> {
     if (state.demoMode) return state.currentElderId;
     if (state.currentElderId.length > 0) return state.currentElderId;
+    const generation = identityGeneration; const token = getToken(); const screen = state.screen;
     const res = await memoApi.listElders();
+    if (!active || generation !== identityGeneration || token !== getToken() || state.demoMode || state.screen !== screen || state.currentElderId.length > 0) return '';
     state.elders = res.items;
     if (res.items.length > 0) {
       setCurrentElder(res.items[0].id);
@@ -650,6 +739,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function enterDemoMode(): void {
+    authAttemptSequence += 1;
     clearIdentityData();
     loadDemoData();
     state.loginPassword = '';
@@ -668,6 +758,16 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function loadScreenData(screen: string): Promise<void> {
+    const sequence = ++screenLoadSequence;
+    const settingVersion = settingSaveVersion;
+    const generation = identityGeneration; const token = getToken(); const role = authenticatedRole;
+    const view = viewGeneration; const viewRole = state.role; const elderVersion = elderGeneration;
+    const demoMode = state.demoMode; const selectedElder = state.currentElderId;
+    const isCurrent = (targetElder?: string): boolean => active && sequence === screenLoadSequence
+      && generation === identityGeneration && token === getToken() && role === authenticatedRole
+      && view === viewGeneration && viewRole === state.role && (!selectedElder || elderVersion === elderGeneration)
+      && demoMode === state.demoMode && state.screen === screen
+      && (targetElder ? state.currentElderId === targetElder : !selectedElder || state.currentElderId === selectedElder);
     if (state.demoMode) {
       applyDemoScreenData(screen);
       return;
@@ -675,59 +775,72 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     if (getToken().length === 0) return;
     try {
       if (screen === 'care') {
-        const generation = identityGeneration;
         const [links, elders] = await Promise.all([memoApi.careLinks(), memoApi.listElders()]);
-        if (!active || generation !== identityGeneration) return;
+        if (!isCurrent()) return;
         careLinks = links.items; state.elders = elders.items;
         rerenderIf(screen);
       } else if (screen === 'elderHome' || screen === 'familyHome') {
-        const generation = identityGeneration;
+        const targetElder = state.currentElderId;
         const [dashboard, setting, elders] = await Promise.all([
-          memoApi.getDashboard(state.currentElderId.length > 0 ? state.currentElderId : undefined),
+          memoApi.getDashboard(targetElder.length > 0 ? targetElder : undefined),
           memoApi.getSetting(), memoApi.listElders(),
         ]);
-        if (!active || generation !== identityGeneration) return;
-        state.setting = setting; state.elders = elders.items;
+        if (!isCurrent(targetElder || undefined)) return;
+        if (settingVersion === settingSaveVersion && state.settingSaveStatus === 'saved') {
+          state.setting = setting; state.settingPersisted = { ...setting };
+        }
+        state.elders = elders.items;
         state.dashboard = dashboard;
         if (dashboard.elder) setCurrentElder(dashboard.elder.id);
         state.places = dashboard.places.map(normalizePlace);
         rerenderIf(screen);
       } else if (screen === 'contacts') {
         const elderId: string = await ensureElderId();
+        if (!isCurrent(elderId || undefined)) return;
         if (elderId.length > 0) {
           const res = await memoApi.listContacts(elderId);
+          if (!isCurrent(elderId)) return;
           state.contacts = res.items;
         }
         rerenderIf(screen);
       } else if (screen === 'taxi' || screen === 'schedule') {
         const elderId: string = await ensureElderId();
+        if (!isCurrent(elderId || undefined)) return;
         if (elderId.length > 0) {
           const res = await memoApi.listTrips(elderId);
+          if (!isCurrent(elderId)) return;
           state.trips = res.items;
         }
         rerenderIf(screen);
       } else if (screen === 'settings') {
-        state.setting = await memoApi.getSetting();
-        const res = await memoApi.listElders();
+        const [setting, res] = await Promise.all([memoApi.getSetting(), memoApi.listElders()]);
+        if (!isCurrent()) return;
+        if (settingVersion === settingSaveVersion && state.settingSaveStatus === 'saved') {
+          state.setting = setting; state.settingPersisted = { ...setting };
+        }
         state.elders = res.items;
         rerenderIf(screen);
       } else if (screen === 'elders') {
         const res = await memoApi.listElders();
+        if (!isCurrent()) return;
         state.elders = res.items;
         rerenderIf(screen);
       } else if (screen === 'safety') {
         const elderId: string = await ensureElderId();
+        if (!isCurrent(elderId || undefined)) return;
         if (elderId.length > 0) {
           const [geofence, places] = await Promise.all([
             memoApi.getGeofence(elderId),
             memoApi.listPlaces(elderId),
           ]);
+          if (!isCurrent(elderId)) return;
           state.geofence = geofence;
           state.places = places.items.map(normalizePlace);
         }
         rerenderIf(screen);
       } else if (screen === 'overview') {
         const elderId: string = await ensureElderId();
+        if (!isCurrent(elderId || undefined)) return;
         if (elderId.length > 0) {
           const [geofence, places, movements, alerts] = await Promise.all([
             memoApi.getGeofence(elderId),
@@ -735,6 +848,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
             memoApi.listMovements(elderId),
             memoApi.listAlerts(elderId),
           ]);
+          if (!isCurrent(elderId)) return;
           state.geofence = geofence;
           state.places = places.items.map(normalizePlace);
           state.movements = movements.items;
@@ -743,24 +857,29 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         rerenderIf(screen);
       } else if (screen === 'vitals') {
         const elderId: string = await ensureElderId();
+        if (!isCurrent(elderId || undefined)) return;
         if (elderId.length > 0) {
-          state.vitals = await memoApi.getVitals(elderId);
+          const vitals = await memoApi.getVitals(elderId);
+          if (!isCurrent(elderId)) return;
+          state.vitals = vitals;
           state.vitalsLoaded = true;
         }
         rerenderIf(screen);
       }
     } catch (error) {
+      if (!isCurrent()) return;
       if (!isUnauthorized(error)) logger.error('載入數據失敗（保留舊數據）', error);
       handleApiError(error);
     }
   }
 
   function homeSearchHtml(): string {
-    return `<div class="home-search"><span class="home-search-icon">🔍</span><input class="home-search-input" data-field="homeSearch" value="${esc(state.homeSearchText)}" placeholder="${t('mapPlaceholder')}"><button class="home-search-mic" data-action="voiceToggle" aria-label="voice">🎤</button><div class="amp-suggest home-suggest" data-homesuggest hidden></div></div>`;
+    const routeSearch = state.screen === 'tripMap';
+    return `<div class="home-search"><span class="home-search-icon">🔍</span><input class="home-search-input" data-field="homeSearch" value="${esc(state.homeSearchText)}" aria-label="${routeSearch ? '搜尋路線目的地' : '搜尋目的地'}" placeholder="${routeSearch ? '搜尋並選擇高德目的地' : t('mapPlaceholder')}"><button class="home-search-mic" data-action="voiceToggle" aria-label="voice">🎤</button><div class="amp-suggest home-suggest" data-homesuggest hidden></div></div>`;
   }
 
   const mapMarkup = (large: boolean = false, kind: 'home' | 'family' | 'large' | 'safety' = 'home'): string =>
-    `<div class="map-wrap">${kind === 'home' ? homeSearchHtml() : (large ? '' : `<button class="map-search" data-go="elderMap">⌕\u3000${t('mapPlaceholder')} <span style="float:right">🎙️</span></button>`)}<div class="map amp ${large ? 'large' : ''}" data-map="${kind}"></div></div>`;
+    `<div class="map-wrap">${kind === 'home' || (large && state.screen === 'tripMap') ? homeSearchHtml() : (large ? '' : `<button class="map-search" data-go="elderMap">⌕\u3000${t('mapPlaceholder')} <span style="float:right">🎙️</span></button>`)}<div class="map amp ${large ? 'large' : ''}" data-map="${kind}"></div></div>`;
 
   function login(): string {
     return `<section class="screen auth"><span class="logo">${logo}</span><h1 class="brand-title">${t('brandName')} MemoPath</h1><p class="tagline">${t('tagline')}</p><div class="segmented"><button class="seg ${state.role === 'elder' ? 'active' : ''}" data-role="elder">${t('elderEntry')}</button><button class="seg ${state.role === 'family' ? 'active' : ''}" data-role="family">${t('familyEntry')}</button></div><div class="panel"><div class="field"><label>${t('phoneLabel')}</label><input class="input" data-field="loginAccount" value="${esc(state.loginAccount)}" placeholder="│輸入手機號碼"></div><div class="field"><label>${t('passwordLabel')}</label><input class="input" type="password" data-field="loginPassword" value="${esc(state.loginPassword)}" placeholder="│輸入密碼"></div><button class="forgot" data-go="register1">${t('forgot')}</button></div><button class="primary" data-action="login">${t('login')}</button><button class="secondary-link" data-action="frontDemo">前端演示（不保存至資料庫）</button>${hasPendingLogout() ? '<button class="secondary-link" data-action="retryLogout">重試撤銷舊會話</button>' : ''}<button class="secondary-link" data-go="register1">${t('newUser')}<span>${t('registerNow')}</span></button><p class="demo-hint">真實帳號需註冊；演示帳號 demo / demo1234 使用真實會話及獨立演示資料。</p></section>`;
@@ -898,7 +1017,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     if (!latest) {
       return `<span class="health-pill">♥ ${state.dashboard === null ? t('vitalLoading') : t('vitalEmpty')}</span>`;
     }
-    return `<span class="health-pill">♥ ${t('vitalsTitle')}\u3000${numOrDash(latest.heartRate)} bpm · 血氧 ${numOrDash(latest.bloodOxygen)}% · ${latest.temperature ? latest.temperature.toFixed(1) : '--'}°\u3000<b>未作健康判斷</b></span>`;
+    return `<span class="health-pill">♥ ${t('vitalsTitle')}\u3000${numOrDash(latest.heartRate)} bpm · 血氧 ${numOrDash(latest.bloodOxygen)}% · ${Number.isFinite(latest.temperature) ? latest.temperature.toFixed(1) : '--'}°\u3000<b>未作健康判斷</b></span>`;
   }
 
   function familyHome(): string {
@@ -917,10 +1036,16 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       `<button class="${cfg.language === value ? 'active' : ''}" data-setting="language:${value}">${label}</button>`;
     const voiceBtn = (value: MemoPathSettingConfig['voiceMode'], label: string): string =>
       `<button class="${cfg.voiceMode === value ? 'active' : ''}" data-setting="voiceMode:${value}">${label}</button>`;
+    const saveStatus = state.demoMode ? '前端演示设置只保留在本页，未写入数据库。'
+      : state.settingSaveStatus === 'saving' ? '正在保存到服务器…'
+      : state.settingSaveStatus === 'failed' ? '保存失败；修改仍保留在此页面。'
+        : state.settingSaveStatus === 'demo' ? '前端演示设置只保留在本页，未写入数据库。'
+          : '设置已保存到服务器。';
+    const retry = state.settingSaveStatus === 'failed' ? '<button class="chip" data-action="retrySettingSave">重试保存</button>' : '';
     if (!state.demoMode && authenticatedRole === 'elder') {
-      return `<section class="screen"><button class="back" data-back>${t('backElderHome')}</button><h1 class="section-title">我的設定</h1><p class="section-sub">只調整自己的帳號設定；照護資料須經明確授權。</p><div class="box"><b>${t('languageTitle')}</b><div class="choice">${langBtn('mandarin', '普通話')}${langBtn('cantonese', '繁體粵語')}${langBtn('english', 'English')}</div></div><div class="box"><b>${t('voiceModeTitle')}</b><div class="choice">${voiceBtn('default_on', t('voiceDefaultOn'))}${voiceBtn('standby', t('voiceStandby'))}</div></div><div class="box toggle-row"><span>${t('lockLayout')}</span><span class="toggle ${cfg.lockLayout ? '' : 'off'}" data-action="toggleLock"></span></div><button class="chip" data-action="logout">登出</button></section>`;
+      return `<section class="screen"><button class="back" data-back>${t('backElderHome')}</button><h1 class="section-title">我的設定</h1><p class="section-sub">只調整自己的帳號設定；照護資料須經明確授權。</p><p class="tiny muted" role="status" aria-live="polite">${saveStatus}</p>${retry}<div class="box"><b>${t('languageTitle')}</b><div class="choice">${langBtn('mandarin', '普通話')}${langBtn('cantonese', '繁體粵語')}${langBtn('english', 'English')}</div></div><div class="box"><b>${t('voiceModeTitle')}</b><div class="choice">${voiceBtn('default_on', t('voiceDefaultOn'))}${voiceBtn('standby', t('voiceStandby'))}</div></div><div class="box toggle-row"><span>${t('lockLayout')}</span><button type="button" class="toggle ${cfg.lockLayout ? '' : 'off'}" data-action="toggleLock" aria-label="${t('lockLayout')}" aria-pressed="${cfg.lockLayout}"></button></div><button class="chip" data-action="logout">登出</button></section>`;
     }
-    return `<section class="screen"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('settingsCenter')}</h1><p class="section-sub">目前帳號的私人設定</p><div class="box"><b>${t('languageTitle')}</b><div class="choice" style="margin-top:10px">${langBtn('mandarin', '普通話')}${langBtn('cantonese', '繁體粵語')}${langBtn('english', 'English')}</div><p class="tiny muted">${t('languageNote')}</p></div><div class="box"><b>${t('voiceModeTitle')}</b><div class="choice" style="grid-template-columns:1fr 1fr;margin-top:10px">${voiceBtn('default_on', t('voiceDefaultOn'))}${voiceBtn('standby', t('voiceStandby'))}</div></div><div class="box toggle-row"><span><b>${t('lockLayout')}</b><br><span class="tiny muted">${t('lockLayoutNote')}</span></span><span class="toggle ${cfg.lockLayout ? '' : 'off'}" data-action="toggleLock"></span></div><button class="chip" data-go="care">照護關聯</button><div class="chip-row"><button class="chip" data-go="elders">👴 ${t('manageElders')}</button><button class="chip" data-action="switchElder">🔄 ${t('switchElder')}</button><button class="chip" data-action="logout">🔒 ${t('logout')}</button></div></section>`;
+    return `<section class="screen"><button class="back" data-back>${t('backFamilyHome')}</button><h1 class="section-title">${t('settingsCenter')}</h1><p class="section-sub">目前帳號的私人設定</p><p class="tiny muted" role="status" aria-live="polite">${saveStatus}</p>${retry}<div class="box"><b>${t('languageTitle')}</b><div class="choice" style="margin-top:10px">${langBtn('mandarin', '普通話')}${langBtn('cantonese', '繁體粵語')}${langBtn('english', 'English')}</div><p class="tiny muted">${t('languageNote')}</p></div><div class="box"><b>${t('voiceModeTitle')}</b><div class="choice" style="grid-template-columns:1fr 1fr;margin-top:10px">${voiceBtn('default_on', t('voiceDefaultOn'))}${voiceBtn('standby', t('voiceStandby'))}</div></div><div class="box toggle-row"><span><b>${t('lockLayout')}</b><br><span class="tiny muted">${t('lockLayoutNote')}</span></span><button type="button" class="toggle ${cfg.lockLayout ? '' : 'off'}" data-action="toggleLock" aria-label="${t('lockLayout')}" aria-pressed="${cfg.lockLayout}"></button></div><button class="chip" data-go="care">照護關聯</button><div class="chip-row"><button class="chip" data-go="elders">👴 ${t('manageElders')}</button><button class="chip" data-action="switchElder">🔄 ${t('switchElder')}</button><button class="chip" data-action="logout">🔒 ${t('logout')}</button></div></section>`;
   }
 
   function elderSettings(): string {
@@ -999,8 +1124,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     const trend = state.vitals.trend;
     const heartRate: string = numOrDash(latest?.heartRate);
     const bloodOxygen: string = numOrDash(latest?.bloodOxygen);
-    const temperature: string = latest && latest.temperature > 0 ? latest.temperature.toFixed(1) : '--';
-    const steps: string = latest && latest.steps > 0 ? latest.steps.toLocaleString() : '--';
+    const temperature: string = latest && Number.isFinite(latest.temperature) ? latest.temperature.toFixed(1) : '--';
+    const steps: string = latest && Number.isFinite(latest.steps) ? latest.steps.toLocaleString() : '--';
     const spark: string = trend.length >= 2
       ? ''
       : `<div class="spark-empty">${t('noTrendData')}</div>`;
@@ -1043,7 +1168,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       .join('');
     const emptyCards: string = `<div class="schedule-empty">${t('tripEmpty')}</div>`;
     const formBlock: string = state.tripFormOpen
-      ? `<div class="detail-list" style="margin-top:12px"><div class="detail-row"><b>${t('date')}</b><div><input class="input" type="date" data-field="tripDate" value="${esc(state.tripForm.tripDate)}"></div></div><div class="detail-row"><b>${t('timeSlot')}</b><div><input class="input" data-field="startTime" value="${esc(state.tripForm.startTime)}" placeholder="09:30"></div></div><div class="detail-row"><b>${t('destination')}</b><div class="dest-field"><input class="input" data-field="destination" value="${esc(state.tripForm.destination)}" placeholder="法國醫院"><div class="amp-suggest" data-destsuggest hidden></div></div></div><div class="toggle-row"><span class="toggle ${state.tripForm.scheduleMode === 'auto' ? '' : 'off'}" data-action="toggleTripMode"></span><span>${t('autoCallNote')}</span></div><button class="save" style="margin-top:14px" data-action="saveTrip">${t('saveTrip')}</button></div>`
+      ? `<div class="detail-list" style="margin-top:12px"><div class="detail-row"><b>${t('date')}</b><div><input class="input" type="date" data-field="tripDate" value="${esc(state.tripForm.tripDate)}"></div></div><div class="detail-row"><b>${t('timeSlot')}</b><div><input class="input" data-field="startTime" value="${esc(state.tripForm.startTime)}" placeholder="09:30"></div></div><div class="detail-row"><b>${t('destination')}</b><div class="dest-field"><input class="input" data-field="destination" value="${esc(state.tripForm.destination)}" placeholder="圣德肋撒医院"><div class="amp-suggest" data-destsuggest hidden></div></div></div><div class="toggle-row"><span class="toggle ${state.tripForm.scheduleMode === 'auto' ? '' : 'off'}" data-action="toggleTripMode"></span><span>${t('autoCallNote')}</span></div><button class="save" style="margin-top:14px" data-action="saveTrip">${t('saveTrip')}</button></div>`
       : '';
     const first: MemoPathTripRecord | undefined = state.trips[0];
     const detailList: string = first
@@ -1067,39 +1192,44 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
 
   async function careAction(action: string): Promise<void> {
     if (state.demoMode || careBusy) return;
-    const generation = identityGeneration;
+    const context = captureIdentityContext();
     careBusy = true;
     try {
       if (action === 'careInvite') {
         const elderId = (app.querySelector('#care-elder') as HTMLSelectElement | null)?.value ?? '';
         if (!elderId) { toast('請先建立自己的長者資料'); return; }
         const result = await memoApi.inviteCare(elderId, careTarget.trim());
-        if (generation !== identityGeneration) return;
+        if (!isIdentityContextCurrent(context)) return;
         careInvitation = result;
       } else if (action === 'carePreview') {
         const result = await memoApi.previewCare(careCode.trim());
-        if (generation !== identityGeneration) return;
+        if (!isIdentityContextCurrent(context)) return;
         carePreview = result;
       } else if (action === 'careAccept') {
         if (!carePreview) return;
         await memoApi.acceptCare(careCode.trim());
-        if (generation !== identityGeneration) return;
+        if (!isIdentityContextCurrent(context)) return;
         carePreview = null; careCode = '';
         const role = authenticatedRole; const isDemo = authenticatedIsDemo; clearIdentityData(); authenticatedRole = role; authenticatedIsDemo = isDemo;
         nav('elderHome'); toast('照護關聯已建立');
       } else if (action === 'careCancel' && careInvitation) {
         await memoApi.revokeCare(careInvitation.invitationId, true);
-        if (generation !== identityGeneration) return;
+        if (!isIdentityContextCurrent(context)) return;
         careInvitation = null;
       } else if (action.startsWith('careRevoke:')) {
         await memoApi.revokeCare(action.slice('careRevoke:'.length));
-        if (generation !== identityGeneration) return;
+        if (!isIdentityContextCurrent(context)) return;
         const role = authenticatedRole; const isDemo = authenticatedIsDemo; clearIdentityData(); authenticatedRole = role; authenticatedIsDemo = isDemo;
-        await loadScreenData('care'); toast('照護關聯已撤銷，舊照護資料已清除');
+        const refreshed = captureIdentityContext();
+        await loadScreenData('care');
+        if (isIdentityContextCurrent(refreshed)) toast('照護關聯已撤銷，舊照護資料已清除');
       }
     } catch (error) {
-      if (generation === identityGeneration) handleApiError(error);
-    } finally { careBusy = false; if (state.screen === 'care') render(); }
+      if (isIdentityContextCurrent(context)) handleApiError(error);
+    } finally {
+      if (context.generation === identityGeneration) careBusy = false;
+      if (isIdentityContextCurrent(context) && state.screen === 'care') render();
+    }
   }
 
   const views: Record<string, () => string> = {
@@ -1159,6 +1289,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function doLogin(): Promise<void> {
+    const attempt = ++authAttemptSequence;
     const account: string = state.loginAccount.trim();
     if (account.length === 0) {
       toast('請輸入帳號；前端演示請使用明確的演示入口');
@@ -1166,21 +1297,25 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     try {
       const res = await memoApi.login(account, state.loginPassword);
+      if (attempt !== authAttemptSequence) return;
       clearIdentityData();
       setToken(res.token);
       const verified = await memoApi.me();
+      if (attempt !== authAttemptSequence || !active || getToken() !== res.token) return;
       authenticatedRole = verified.role; authenticatedIsDemo = verified.isDemo === true; state.role = verified.role;
       state.loginPassword = '';
       toast(`歡迎，${res.displayName}`);
       state.history = [];
       nav(state.role === 'elder' ? 'elderHome' : 'familyHome');
     } catch (error) {
+      if (attempt !== authAttemptSequence) return;
       // Wrong credentials are a login failure, not an expired established session.
       toast(extractErrorMessage(error));
     }
   }
 
   async function doRegister(): Promise<void> {
+    const attempt = ++authAttemptSequence;
     if (state.regPhone.length === 0) {
       toast('請輸入手機號碼');
       return;
@@ -1214,7 +1349,9 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       let taken = false;
       try {
         taken = await memoApi.existsAccount(state.regPhone);
+        if (attempt !== authAttemptSequence) return;
       } catch (checkError) {
+        if (attempt !== authAttemptSequence) return;
         logger.warn('帳號預檢失敗，繼續註冊流程', checkError);
       }
       if (taken) {
@@ -1227,9 +1364,11 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         role: state.role,
         elder: state.elderForm,
       });
+      if (attempt !== authAttemptSequence) return;
       clearIdentityData();
       setToken(res.token);
       const verified = await memoApi.me();
+      if (attempt !== authAttemptSequence || !active || getToken() !== res.token) return;
       authenticatedRole = verified.role;
       authenticatedIsDemo = verified.isDemo === true;
       state.role = verified.role;
@@ -1237,6 +1376,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       state.history = [];
       nav(state.role === 'elder' ? 'elderHome' : 'familyHome');
     } catch (error) {
+      if (attempt !== authAttemptSequence) return;
       const message: string = extractErrorMessage(error);
       if (message.includes('已存在')) {
         showAccountExistsDialog();
@@ -1292,19 +1432,24 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       back();
       return;
     }
+    const context = captureIdentityContext();
+    const editingId = state.editingElderId;
+    const submittedForm = { ...state.elderForm };
     try {
-      if (state.editingElderId.length === 0) {
-        const created: MemoPathElderRecord = await memoApi.createElder(state.elderForm);
+      if (editingId.length === 0) {
+        const created: MemoPathElderRecord = await memoApi.createElder(submittedForm);
+        if (!isIdentityContextCurrent(context) || state.editingElderId !== editingId) return;
         setCurrentElder(created.id);
         toast('已新增长者');
       } else {
-        await memoApi.updateElder(state.editingElderId, state.elderForm);
+        await memoApi.updateElder(editingId, submittedForm);
+        if (!isIdentityContextCurrent(context) || state.editingElderId !== editingId) return;
         toast('已儲存長者資料');
       }
       state.elderForm = { name: '' };
       back();
     } catch (error) {
-      handleApiError(error);
+      if (isIdentityContextCurrent(context)) handleApiError(error);
     }
   }
 
@@ -1315,30 +1460,48 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     const elderId: string = await ensureElderId();
     if (elderId.length === 0 || !state.geofence) return;
+    const context = captureIdentityContext();
+    const draft = { ...state.geofence };
     try {
-      state.geofence = await memoApi.saveGeofence(elderId, {
-        homeLabel: state.geofence.homeLabel,
-        radiusM: state.geofence.radiusM,
-        dwellEnabled: state.geofence.dwellEnabled,
-        dwellMinutes: state.geofence.dwellMinutes,
+      const saved = await memoApi.saveGeofence(elderId, {
+        homeLabel: draft.homeLabel,
+        radiusM: draft.radiusM,
+        dwellEnabled: draft.dwellEnabled,
+        dwellMinutes: draft.dwellMinutes,
       });
+      if (!isIdentityContextCurrent(context)) return;
+      state.geofence = saved;
       toast('圍欄設定已保存');
     } catch (error) {
-      handleApiError(error);
+      if (isIdentityContextCurrent(context)) handleApiError(error);
     }
   }
 
   async function saveSetting(patch: Partial<MemoPathSettingConfig>): Promise<void> {
     const next: MemoPathSettingConfig = { ...state.setting, ...patch };
     state.setting = next;
-    render();
-    if (state.demoMode) { toast('前端演示設定只保存於本頁，不寫入資料庫'); return; }
-    try {
-      state.setting = await memoApi.saveSetting(next);
-      rerenderIf(state.screen);
-    } catch (error) {
-      handleApiError(error);
-    }
+    if (state.demoMode) { state.settingSaveStatus = 'demo'; render(); toast('前端演示設定只保存於本頁，不寫入資料庫'); return; }
+    const generation = identityGeneration; const token = getToken(); const role = authenticatedRole;
+    const version = ++settingSaveVersion;
+    state.settingSaveStatus = 'saving'; render();
+    settingSaveQueue = settingSaveQueue.catch(() => undefined).then(async () => {
+      if (!active || generation !== identityGeneration || token !== getToken() || role !== authenticatedRole || state.demoMode) return;
+      const snapshot = { ...state.setting };
+      try {
+        const saved = await memoApi.saveSetting(snapshot);
+        if (!active || generation !== identityGeneration || token !== getToken() || role !== authenticatedRole || state.demoMode) return;
+        state.settingPersisted = saved;
+        if (version === settingSaveVersion) { state.setting = saved; state.settingSaveStatus = 'saved'; }
+        rerenderIf('settings');
+      } catch (error) {
+        if (active && generation === identityGeneration && token === getToken() && role === authenticatedRole && !state.demoMode && version === settingSaveVersion) {
+          state.settingSaveStatus = 'failed';
+          handleApiError(error);
+          rerenderIf('settings');
+        }
+      }
+    });
+    await settingSaveQueue;
   }
 
   async function saveTrip(): Promise<void> {
@@ -1366,50 +1529,99 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       rerenderIf('schedule');
       return;
     }
+    const context = captureIdentityContext();
+    const submittedForm = { ...form };
     try {
       await memoApi.createTrip({
         elderId,
-        destination: form.destination,
-        tripDate: form.tripDate,
-        startTime: form.startTime,
+        destination: submittedForm.destination,
+        tripDate: submittedForm.tripDate,
+        startTime: submittedForm.startTime,
         endTime: '',
-        scheduleMode: form.scheduleMode,
+        scheduleMode: submittedForm.scheduleMode,
       });
+      if (!isIdentityContextCurrent(context)) return;
       state.tripForm = { destination: '', tripDate: '', startTime: '', scheduleMode: 'auto' };
       state.tripFormOpen = false;
       toast('行程已新增');
       const res = await memoApi.listTrips(elderId);
+      if (!isIdentityContextCurrent(context)) return;
       state.trips = res.items;
       rerenderIf('schedule');
     } catch (error) {
-      handleApiError(error);
+      if (isIdentityContextCurrent(context)) handleApiError(error);
     }
   }
 
   function placeFormHtml(): string {
-    const draft: { label: string; address: string; lng: number; lat: number } | null = state.placeDraft;
+    const draft = state.placeDraft;
     const icons: string = PLACE_ICONS.map(
       (icon: string) =>
         `<button type="button" class="icon-opt ${state.placeIcon === icon ? 'active' : ''}" data-placeicon="${icon}">${icon}</button>`,
     ).join('');
     const summary: string = draft
-      ? `<div class="place-draft">📍 <b>${esc(draft.label)}</b><br><small class="muted">${esc(draft.address)}</small></div>`
+      ? `<div class="place-draft">📍 <b>${esc(draft.label)}</b><br><small class="muted">${esc(draft.address)}</small>${draft.locationResolved ? '' : '<br><small class="error" role="alert">搜尋結果沒有可用座標，請重新選擇有座標的結果。</small>'}</div>`
       : `<p class="tiny muted">${t('placePickHint')}</p>`;
-    return `<div class="place-form"><input class="input" data-field="placeSearch" value="${esc(state.placeSearchText)}" placeholder="${t('placeSearchPlaceholder')}"><div class="amp-suggest place-suggest" data-placesuggest hidden></div>${summary}<small class="muted">${t('placeIconLabel')}</small><div class="icon-row">${icons}</div><div class="place-form-actions"><button class="chip" data-action="confirmPlace">${t('confirmPlaceBtn')}</button><button class="chip" data-action="cancelPlace">${t('cancelBtn')}</button></div></div>`;
+    const searchStatus: Record<typeof state.placeSearchStatus, string> = {
+      idle: '', searching: '正在搜索真实地点…', empty: '没有找到结果，请更换关键词。',
+      'missing-config': '地图搜索不可用：未配置高德地图 Key；输入已保留。',
+      error: '地图搜索暂时不可用，请检查配置或网络后重试；输入已保留。',
+    };
+    const retry = state.placeSearchStatus === 'error' || state.placeSearchStatus === 'missing-config'
+      ? '<button type="button" class="chip" data-action="retryPlaceSearch">重试搜索</button>' : '';
+    return `<div class="place-form"><input class="input" data-field="placeSearch" value="${esc(state.placeSearchText)}" placeholder="${t('placeSearchPlaceholder')}"><div class="amp-suggest place-suggest" data-placesuggest hidden></div><p class="tiny muted" data-placesearch-status role="status" aria-live="polite" ${state.placeSearchStatus === 'idle' ? 'hidden' : ''}>${esc(searchStatus[state.placeSearchStatus])}</p>${retry}${summary}<small class="muted">${t('placeIconLabel')}</small><div class="icon-row">${icons}</div><div class="place-form-actions"><button class="chip" data-action="confirmPlace">${t('confirmPlaceBtn')}</button><button class="chip" data-action="cancelPlace">${t('cancelBtn')}</button></div></div>`;
   }
 
-  async function suggestPlaceSearch(value: string): Promise<void> {
+  function updatePlaceSearchStatus(): void {
+    const status = app.querySelector<HTMLElement>('[data-placesearch-status]');
+    if (!status) return;
+    const messages = {
+      idle: '', searching: '正在搜索真实地点…', empty: '没有找到结果，请更换关键词。',
+      'missing-config': '地图搜索不可用：未配置高德地图 Key；输入已保留。',
+      error: '地图搜索暂时不可用，请检查配置或网络后重试；输入已保留。',
+    } satisfies Record<typeof state.placeSearchStatus, string>;
+    status.textContent = messages[state.placeSearchStatus];
+    status.hidden = state.placeSearchStatus === 'idle';
+    const retry = app.querySelector<HTMLButtonElement>('[data-action="retryPlaceSearch"]');
+    if (state.placeSearchStatus === 'error' || state.placeSearchStatus === 'missing-config') {
+      if (!retry) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'chip';
+        button.dataset.action = 'retryPlaceSearch'; button.textContent = '重试搜索';
+        status.insertAdjacentElement('afterend', button);
+      }
+    } else {
+      retry?.remove();
+    }
+  }
+
+  async function suggestPlaceSearch(value: string, sequence = ++placeSearchSequence): Promise<void> {
+    const context = captureIdentityContext();
+    const keyword = value.trim();
     if (value.trim().length === 0) {
       state.placeTips = [];
+      state.placeSearchStatus = 'idle';
       renderSuggestPanel(app.querySelector('[data-placesuggest]'), [], 'placepick');
+      updatePlaceSearchStatus();
       return;
     }
+    if (sequence !== placeSearchSequence) return;
+    state.placeSearchStatus = 'searching';
+    updatePlaceSearchStatus();
     try {
-      const tips: AmpTip[] = await searchTips(value);
+      const tips: AmpTip[] = await searchTips(keyword);
+      if (!isIdentityContextCurrent(context) || sequence !== placeSearchSequence || keyword !== state.placeSearchText.trim()) return;
       state.placeTips = tips.slice(0, 6);
+      state.placeSearchStatus = state.placeTips.length > 0 ? 'idle' : 'empty';
       renderSuggestPanel(app.querySelector('[data-placesuggest]'), state.placeTips, 'placepick');
+      updatePlaceSearchStatus();
     } catch (error) {
-      logger.warn('地點搜索失敗', error);
+      if (!isIdentityContextCurrent(context) || sequence !== placeSearchSequence || keyword !== state.placeSearchText.trim()) return;
+      state.placeTips = [];
+      state.placeSearchStatus = isMapConfigured() ? 'error' : 'missing-config';
+      logger.warn('amap_place_search_failed', { configured: isMapConfigured() });
+      renderSuggestPanel(app.querySelector('[data-placesuggest]'), [], 'placepick');
+      updatePlaceSearchStatus();
     }
   }
 
@@ -1420,8 +1632,10 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     state.placeDraft = {
       label: tip.name,
       address,
-      lng: tip.location ? tip.location.lng : 0,
-      lat: tip.location ? tip.location.lat : 0,
+      lng: tip.location?.lng ?? null,
+      lat: tip.location?.lat ?? null,
+      locationResolved: tip.location != null && Number.isFinite(tip.location.lng) && Number.isFinite(tip.location.lat),
+      coordinatesKnown: tip.location != null && Number.isFinite(tip.location.lng) && Number.isFinite(tip.location.lat),
     };
     state.placeSearchText = tip.name;
     state.placeTips = [];
@@ -1429,60 +1643,67 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function confirmPlace(): Promise<void> {
-    const draft: { label: string; address: string; lng: number; lat: number } | null = state.placeDraft;
+    const draft = state.placeDraft;
     if (!draft) {
       toast(t('placePickHint'));
       return;
     }
+    if (!draft.locationResolved) {
+      toast('該搜索結果沒有可用座標，請重新選擇地點');
+      return;
+    }
     const elderId: string = await ensureElderId();
     if (elderId.length === 0) return;
+    const context = captureIdentityContext();
     const editing: boolean = state.editingPlaceId.length > 0;
-    const record: MemoPathPlaceRecord = {
-      id: editing ? state.editingPlaceId : `place_${Date.now()}`,
-      elderId,
+    const editingId = state.editingPlaceId;
+    const payload = {
       label: draft.label,
       icon: state.placeIcon,
-      placeType: 'frequent',
-      beaconStatus: 'safe',
+      placeType: 'frequent' as const,
+      beaconStatus: 'safe' as const,
       address: draft.address,
-      lng: draft.lng,
-      lat: draft.lat,
+      ...(draft.coordinatesKnown && draft.lng !== null && draft.lat !== null ? { lng: draft.lng, lat: draft.lat } : {}),
     };
-    if (editing) {
-      state.places = state.places.map(
-        (place: MemoPathPlaceRecord) => (place.id === record.id ? record : place),
-      );
-    } else {
-      state.places = [...state.places, record];
-    }
-    if (!state.demoMode && !editing) {
-      try {
-        await memoApi.addPlace({
-          elderId,
-          label: record.label,
-          icon: record.icon,
-          placeType: 'frequent',
-          beaconStatus: 'safe',
-          address: record.address,
-          lng: record.lng,
-          lat: record.lat,
-        });
-      } catch (error) {
-        logger.warn('常去地點未能同步到伺服器（本次已於本機保存）', error);
+    let record: MemoPathPlaceRecord;
+    try {
+      if (state.demoMode) {
+        record = { id: editing ? state.editingPlaceId : `place_${Date.now()}`, elderId, ...payload, lng: draft.lng ?? 0, lat: draft.lat ?? 0 };
+      } else {
+        record = editing
+          ? await memoApi.updatePlace(editingId, payload)
+          : await memoApi.addPlace({ elderId, ...payload });
       }
+    } catch (error) {
+      if (isIdentityContextCurrent(context)) handleApiError(error);
+      return;
     }
+    if (!isIdentityContextCurrent(context) || state.editingPlaceId !== editingId || state.placeDraft !== draft) return;
+    state.places = editing
+      ? state.places.map((place: MemoPathPlaceRecord) => place.id === record.id ? record : place)
+      : [...state.places, record];
     state.addingPlace = false;
     state.editingPlaceId = '';
     state.placeDraft = null;
     state.placeSearchText = '';
     state.placeTips = [];
-    toast(t('placeSaved'));
+    toast(state.demoMode ? '演示資料僅保留在本頁，未寫入資料庫' : t('placeSaved'));
     rerenderIf('safety');
   }
 
-  function deletePlace(placeId: string): void {
+  async function deletePlace(placeId: string): Promise<void> {
+    const context = captureIdentityContext();
+    if (!state.demoMode) {
+      try {
+        await memoApi.deletePlace(placeId);
+        if (!isIdentityContextCurrent(context)) return;
+      } catch (error) {
+        if (isIdentityContextCurrent(context)) handleApiError(error);
+        return;
+      }
+    }
     state.places = state.places.filter((place: MemoPathPlaceRecord) => place.id !== placeId);
-    toast(t('placeDeleted'));
+    toast(state.demoMode ? '演示資料僅從本頁移除，未寫入資料庫' : t('placeDeleted'));
     rerenderIf('safety');
   }
 
@@ -1493,7 +1714,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     if (!place || place.placeType !== 'frequent') return;
     state.addingPlace = true;
     state.editingPlaceId = place.id;
-    state.placeDraft = { label: place.label, address: place.address, lng: place.lng, lat: place.lat };
+    state.placeDraft = { label: place.label, address: place.address, lng: place.lng, lat: place.lat, locationResolved: true, coordinatesKnown: !(place.lng === 0 && place.lat === 0) };
     state.placeIcon = place.icon.length > 0 ? place.icon : '📍';
     state.placeSearchText = place.label;
     render();
@@ -1527,24 +1748,17 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     void navigateToDestination(place.label);
   }
 
-  async function suggestHome(value: string): Promise<void> {
-    if (value.trim().length === 0) {
-      state.homeTips = [];
-      renderSuggestPanel(app.querySelector('[data-homesuggest]'), [], 'homepick');
-      return;
-    }
-    try {
-      const tips: AmpTip[] = await searchTips(value);
-      state.homeTips = tips.slice(0, 6);
-      renderSuggestPanel(app.querySelector('[data-homesuggest]'), state.homeTips, 'homepick');
-    } catch (error) {
-      logger.warn('地點搜索失敗', error);
-    }
+  async function suggestHome(value: string, sequence: number): Promise<void> {
+    await suggestFor('home', value, sequence);
   }
 
   async function pickHomeTip(index: number): Promise<void> {
     const tip: AmpTip | undefined = state.homeTips[index];
     if (!tip) return;
+    if (state.screen === 'tripMap' && (!tip.location || !Number.isFinite(tip.location.lng) || !Number.isFinite(tip.location.lat))) {
+      toast('該搜索結果沒有可用座標，請選擇其他高德地點');
+      return;
+    }
     state.homeSearchText = '';
     state.homeTips = [];
     renderSuggestPanel(app.querySelector('[data-homesuggest]'), [], 'homepick');
@@ -1569,7 +1783,10 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     try {
       const elderId: string = await ensureElderId();
       if (elderId.length === 0) return null;
-      state.geofence = await memoApi.getGeofence(elderId);
+      const context = captureIdentityContext();
+      const geofence = await memoApi.getGeofence(elderId);
+      if (!isIdentityContextCurrent(context)) return null;
+      state.geofence = geofence;
       return state.geofence;
     } catch (error) {
       logger.warn('讀取安全範圍失敗', error);
@@ -1598,12 +1815,15 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     container: HTMLElement,
     kind: 'home' | 'family' | 'large' | 'safety',
   ): Promise<void> {
+    const context = captureIdentityContext();
+    const current = (): boolean => isIdentityContextCurrent(context) && container.isConnected;
     container.innerHTML = `<div class="map-loading">🗺️ ${t('mapLoadingText')}</div>`;
     try {
       await loadAMap();
-      if (!container.isConnected) return;
+      if (!current()) return;
       teardownMap(container);
       const geofence: MemoPathGeofenceRecord | null = await ensureGeofence();
+      if (!current()) return;
       const homeLabel: string = geofence ? cleanHomeLabel(geofence.homeLabel) : '';
       let homePos: AMapPoint | null = null;
       if (homeLabel.length > 0) {
@@ -1611,12 +1831,13 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
           homePos = homePosCache.pos;
         } else {
           homePos = await resolveHomePosition(homeLabel);
+          if (!current()) return;
           if (homePos) homePosCache = { label: homeLabel, pos: homePos };
         }
       }
-      if (!container.isConnected) return;
+      if (!current()) return;
       const pos: AMapPoint = await getCurrentPosition();
-      if (!container.isConnected) return;
+      if (!current()) return;
       container.innerHTML = '';
       const center: AMapPoint = kind === 'safety' && homePos ? homePos : pos;
       const zoom: number = kind === 'safety' && geofence ? zoomForRadius(geofence.radiusM) : 16;
@@ -1635,22 +1856,27 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         await autoPlanTrip();
       }
     } catch (error) {
-      logger.warn('地圖載入失敗', error);
-      if (container.isConnected) unavailableMap(container, error);
+      if (!current()) return;
+      logger.warn('地圖載入失敗', { operation: 'map_load', result: 'failed' });
+      unavailableMap(container, error);
     }
   }
 
-  async function autoPlanTrip(): Promise<void> {
+  async function autoPlanTrip(forceFreshPosition = false): Promise<void> {
+    const context = captureIdentityContext();
+    const destination = state.navDestination;
     let destPos: AMapPoint | null = state.navPos;
     if (!destPos) {
-      destPos = await geocodeAddress(state.navDestination);
+      destPos = await geocodeAddress(destination);
     }
+    if (!isIdentityContextCurrent(context) || destination !== state.navDestination) return;
     if (!destPos) {
-      toast('搵唔到該目的地嘅位置');
+      showRouteInfo('無法解析此目的地。請在地圖上方搜尋，並選擇帶有效座標的高德地點後再規劃。');
+      toast('目的地未解析，請在上方搜尋框選擇真實地點');
       return;
     }
     state.navPos = destPos;
-    await planAndDraw(destPos, state.navDestination, 'driving');
+    await planAndDraw(destPos, destination, 'driving', forceFreshPosition);
   }
 
   async function mountScreenMaps(): Promise<void> {
@@ -1683,37 +1909,43 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     panel.hidden = false;
   }
 
-  async function suggestMap(value: string): Promise<void> {
-    if (value.trim().length === 0) {
-      state.mapTips = [];
-      renderSuggestPanel(app.querySelector('[data-mapsuggest]'), [], 'mappick');
-      return;
-    }
-    try {
-      const tips: AmpTip[] = await searchTips(value);
-      state.mapTips = tips.slice(0, 6);
-      renderSuggestPanel(app.querySelector('[data-mapsuggest]'), state.mapTips, 'mappick');
-    } catch (error) {
-      logger.warn('目的地搜索失敗', error);
-      state.mapTips = [];
-      showSuggestionFailure(app.querySelector('[data-mapsuggest]'), error);
-    }
+  async function suggestMap(value: string, sequence: number): Promise<void> {
+    await suggestFor('map', value, sequence);
   }
 
-  async function suggestDestination(value: string): Promise<void> {
-    if (value.trim().length === 0) {
-      state.destTips = [];
-      renderSuggestPanel(app.querySelector('[data-destsuggest]'), [], 'destpick');
+  async function suggestDestination(value: string, sequence: number): Promise<void> {
+    await suggestFor('destination', value, sequence);
+  }
+
+  async function suggestFor(kind: 'home' | 'map' | 'destination', value: string, sequence: number): Promise<void> {
+    const context = captureIdentityContext();
+    const selectors = { home: 'homesuggest', map: 'mapsuggest', destination: 'destsuggest' };
+    const picks = { home: 'homepick', map: 'mappick', destination: 'destpick' };
+    const panel = app.querySelector<HTMLElement>(`[data-${selectors[kind]}]`);
+    const current = (): boolean => isIdentityContextCurrent(context) && sequence === suggestionSequences[kind] && !!panel?.isConnected;
+    const setTips = (tips: AmpTip[]): void => {
+      if (kind === 'home') state.homeTips = tips;
+      else if (kind === 'map') state.mapTips = tips;
+      else state.destTips = tips;
+    };
+    if (!current()) return;
+    setTips([]);
+    renderSuggestPanel(panel, [], picks[kind]);
+    if (!value.trim()) return;
+    if (!isMapConfigured()) {
+      if (panel) { panel.textContent = '地點搜尋不可用：尚未配置高德 Key。'; panel.hidden = false; }
       return;
     }
     try {
-      const tips: AmpTip[] = await searchTips(value);
-      state.destTips = tips.slice(0, 6);
-      renderSuggestPanel(app.querySelector('[data-destsuggest]'), state.destTips, 'destpick');
+      const tips = (await searchTips(value)).slice(0, 6);
+      if (!current()) return;
+      setTips(tips);
+      renderSuggestPanel(panel, tips, picks[kind]);
+      if (!tips.length && panel) { panel.textContent = '找不到符合的地點，請修改搜尋文字後重試。'; panel.hidden = false; }
     } catch (error) {
-      logger.warn('目的地搜索失敗', error);
-      state.destTips = [];
-      showSuggestionFailure(app.querySelector('[data-destsuggest]'), error);
+      if (!current()) return;
+      logger.warn('地點搜尋失敗', { operation: 'map_search', result: 'failed' });
+      showSuggestionFailure(panel, error);
     }
   }
 
@@ -1738,7 +1970,9 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     routeOverlays = [];
   }
 
-  async function planAndDraw(dest: AMapPoint, label: string, mode: 'walking' | 'driving'): Promise<void> {
+  async function planAndDraw(dest: AMapPoint, label: string, mode: 'walking' | 'driving', forceFreshPosition = false): Promise<void> {
+    const context = captureIdentityContext();
+    const sequence = ++routeSequence;
     const container: Element | null = app.querySelector('[data-map="large"]');
     if (!(container instanceof HTMLElement)) return;
     const map: AMapInstance | null = getMapFor(container);
@@ -1746,8 +1980,10 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       toast('地圖未準備好，請稍後再試');
       return;
     }
-    const pos: AMapPoint = await getCurrentPosition();
+    const pos: AMapPoint = await getCurrentPosition({ forceFresh: forceFreshPosition });
+    if (!isIdentityContextCurrent(context) || sequence !== routeSequence || !container.isConnected || getMapFor(container) !== map) return;
     const route: AmpRoute | null = await planRoute(mode, pos, dest);
+    if (!isIdentityContextCurrent(context) || sequence !== routeSequence || !container.isConnected || getMapFor(container) !== map) return;
     if (!route) {
       toast('暫時規劃唔到路線，請稍後再試');
       return;
@@ -1770,12 +2006,14 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function pickMapTip(index: number): Promise<void> {
+    const context = captureIdentityContext();
     const tip: AmpTip | undefined = state.mapTips[index];
     if (!tip) return;
     const panel: HTMLElement | null = app.querySelector('[data-mapsuggest]');
     if (panel) panel.hidden = true;
     toast(`正在規劃去「${tip.name}」嘅路線…`);
     const dest: AMapPoint | null = tip.location ?? (await geocodeAddress(`${tip.district}${tip.name}`));
+    if (!isIdentityContextCurrent(context)) return;
     if (!dest) {
       toast('搵唔到該地點嘅位置');
       return;
@@ -1784,7 +2022,9 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function goRouteHome(): Promise<void> {
+    const context = captureIdentityContext();
     const geofence: MemoPathGeofenceRecord | null = await ensureGeofence();
+    if (!isIdentityContextCurrent(context)) return;
     const homeLabel: string = geofence ? cleanHomeLabel(geofence.homeLabel) : '';
     if (homeLabel.length === 0) {
       toast('請先喺「設定安全範圍」填寫屋企地址');
@@ -1792,6 +2032,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     toast('正在規劃返屋企嘅路線…');
     const homePos: AMapPoint | null = await resolveHomePosition(homeLabel);
+    if (!isIdentityContextCurrent(context)) return;
     if (!homePos) {
       toast('搵唔到屋企地址嘅位置');
       return;
@@ -1847,13 +2088,14 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function stopListening(): void {
+    const context = captureIdentityContext();
     if (!voiceHandle) return;
     const handle: VoiceRecognizerHandle = voiceHandle;
     voiceHandle = null;
     handle.stop();
     // 由 onend 統一收尾；萬一瀏覽器唔觸發，用兜底定時器完成
     window.clearTimeout(voiceFinalizeTimer);
-    voiceFinalizeTimer = window.setTimeout(() => finalizeVoice(), 1200);
+    voiceFinalizeTimer = window.setTimeout(() => { if (isIdentityContextCurrent(context)) finalizeVoice(); }, 1200);
   }
 
   function startListening(): void {
@@ -1866,21 +2108,25 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     state.voiceText = '';
     voiceFinalAccum = '';
     render();
+    const context = captureIdentityContext();
     const handle: VoiceRecognizerHandle | null = startVoiceRecognition({
       lang: voiceLang(),
       onInterim: (text: string) => {
+        if (!isIdentityContextCurrent(context)) return;
         const display: string = voiceFinalAccum.length > 0 ? `${voiceFinalAccum} ${text}` : text;
         state.voiceText = display;
         const el: Element | null = app.querySelector('[data-voicetext]');
         if (el) el.textContent = display;
       },
       onFinal: (text: string) => {
+        if (!isIdentityContextCurrent(context)) return;
         voiceFinalAccum = text;
         state.voiceText = text;
         const el: Element | null = app.querySelector('[data-voicetext]');
         if (el) el.textContent = text;
       },
       onError: (code: string) => {
+        if (!isIdentityContextCurrent(context)) return;
         if (code === 'not-allowed' || code === 'service-not-allowed') {
           window.clearTimeout(voiceFinalizeTimer);
           state.listening = false;
@@ -1893,6 +2139,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         logger.warn('語音識別錯誤，等待 onend 收尾', code);
       },
       onEnd: () => {
+        if (!isIdentityContextCurrent(context)) return;
         window.clearTimeout(voiceFinalizeTimer);
         finalizeVoice();
       },
@@ -1940,14 +2187,18 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
 
   async function callContactByName(name: string): Promise<void> {
     const elderId: string = await ensureElderId();
+    const context = captureIdentityContext();
     if (elderId.length > 0 && state.contacts.length === 0) {
       try {
         const res = await memoApi.listContacts(elderId);
+        if (!isIdentityContextCurrent(context)) return;
         state.contacts = res.items;
       } catch (error) {
+        if (!isIdentityContextCurrent(context)) return;
         logger.warn('載入聯絡人失敗', error);
       }
     }
+    if (!isIdentityContextCurrent(context)) return;
     const hit: MemoPathContactRecord | undefined = state.contacts.find(
       (contact: MemoPathContactRecord) => name.includes(contact.name) || contact.name.includes(name),
     );
@@ -2024,7 +2275,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     app.querySelector('.overlay')?.remove();
     if (kind === 'home') {
       nav('elderMap');
-      void goRouteHome();
+      runWithContext(() => goRouteHome());
     } else if (kind === 'payment') {
       nav('payment');
     } else if (kind === 'taxi') {
@@ -2061,6 +2312,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function confirmCab(): Promise<void> {
+    const context = captureIdentityContext();
+    const tripId = state.callingTripId;
     const overlay: Element | null = app.querySelector('.overlay');
     if (overlay) overlay.remove();
     if (state.callingTripId.length === 0) {
@@ -2068,7 +2321,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       return;
     }
     const calledTrip: MemoPathTripRecord | undefined = state.trips.find(
-      (trip: MemoPathTripRecord) => trip.id === state.callingTripId,
+      (trip: MemoPathTripRecord) => trip.id === tripId,
     );
     if (state.demoMode) {
       if (calledTrip) {
@@ -2079,18 +2332,21 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       rerenderIf('taxi');
       return;
     }
+    if (!calledTrip || calledTrip.elderId !== state.currentElderId) return;
     try {
-      await memoApi.callCab(state.callingTripId);
+      const elderId = calledTrip.elderId;
+      await memoApi.callCab(tripId);
+      if (!isIdentityContextCurrent(context)) return;
       if (calledTrip) state.navDestination = calledTrip.destination;
       toastAction(t('cabCalledToast'), t('cabSeeDriver'), 'cabArrived');
-      const elderId: string = await ensureElderId();
       if (elderId.length > 0) {
         const res = await memoApi.listTrips(elderId);
+        if (!isIdentityContextCurrent(context)) return;
         state.trips = res.items;
       }
       rerenderIf('taxi');
     } catch (error) {
-      handleApiError(error);
+      if (isIdentityContextCurrent(context)) handleApiError(error);
     }
   }
 
@@ -2125,15 +2381,18 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
         toast('此 +852 手機欄位須輸入8位數字');
         return;
       }
+      const context = captureIdentityContext();
+      const phone = state.regPhone;
       try {
-        const res = await memoApi.requestOtp(state.regPhone);
+        const res = await memoApi.requestOtp(phone);
+        if (!isIdentityContextCurrent(context) || state.regPhone !== phone) return;
         state.regOtpIssued = res.code;
         state.regOtp = res.code;
         startOtpCountdown();
         toast(`演示驗證碼：${res.code}（未發送短信）`);
         render();
       } catch (error) {
-        handleApiError(error);
+        if (isIdentityContextCurrent(context) && state.regPhone === phone) handleApiError(error);
       }
     } else if (action === 'regNext') {
       if (state.regOtp.length !== 6 || state.regOtp !== state.regOtpIssued) {
@@ -2166,14 +2425,26 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       toast('正在撥打給長者…（演示）');
     } else if (action === 'toggleLock') {
       await saveSetting({ lockLayout: !state.setting.lockLayout });
+    } else if (action === 'retrySettingSave') {
+      await saveSetting(state.setting);
     } else if (action === 'frontDemo') {
-      const confirmed = await memoApi.logout(); setToken(''); enterDemoMode();
+      authAttemptSequence += 1;
+      const context = captureIdentityContext();
+      const confirmed = await memoApi.logout();
+      if (!isIdentityContextCurrent(context)) return;
+      setToken(''); enterDemoMode();
       if (!confirmed) toast('前端演示已開啟；舊會話撤銷未確認，可能仍有效至到期。返回登入頁可重試撤銷。');
     } else if (action === 'retryLogout') {
-      const confirmed = await memoApi.retryLogout(); render();
+      const context = captureIdentityContext();
+      const confirmed = await memoApi.retryLogout();
+      if (!isIdentityContextCurrent(context)) return;
+      render();
       toast(confirmed ? '舊會話已不可用' : '撤銷未確認，請恢復連線後重試；舊會話可能仍有效至到期');
     } else if (action === 'logout') {
+      authAttemptSequence += 1;
+      const context = captureIdentityContext();
       const confirmed = await memoApi.logout();
+      if (!isIdentityContextCurrent(context)) return;
       setToken(''); clearIdentityData(); nav('login');
       toast(confirmed ? '已登出' : '本機資料已清除；服務端撤銷未確認，舊會話可能仍有效至到期。可點擊重試撤銷。');
     } else if (action === 'switchToFamily') {
@@ -2203,6 +2474,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       state.placeDraft = null;
       state.placeSearchText = '';
       state.placeTips = [];
+      state.placeSearchStatus = 'idle';
       state.placeIcon = '📍';
       render();
     } else if (action === 'confirmPlace') {
@@ -2213,7 +2485,11 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       state.placeDraft = null;
       state.placeSearchText = '';
       state.placeTips = [];
+      state.placeSearchStatus = 'idle'; placeSearchSequence += 1;
       render();
+    } else if (action === 'retryPlaceSearch') {
+      const sequence = ++placeSearchSequence;
+      void suggestPlaceSearch(state.placeSearchText, sequence);
     } else if (action === 'toggleDwell') {
       if (state.geofence) {
         state.geofence = { ...state.geofence, dwellEnabled: !state.geofence.dwellEnabled };
@@ -2233,7 +2509,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     } else if (action === 'retryMap') {
       await mountScreenMaps();
     } else if (action === 'tripNavRetry') {
-      await autoPlanTrip();
+      await autoPlanTrip(true);
     } else if (action === 'newTrip') {
       const now: Date = new Date();
       const todayIso: string = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -2324,7 +2600,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     const mappick: string | undefined = target.dataset.mappick;
     if (mappick !== undefined) {
-      void pickMapTip(Number(mappick));
+      runWithContext(() => pickMapTip(Number(mappick)));
       return;
     }
     const destpick: string | undefined = target.dataset.destpick;
@@ -2334,7 +2610,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     const homepick: string | undefined = target.dataset.homepick;
     if (homepick !== undefined) {
-      void pickHomeTip(Number(homepick));
+      runWithContext(() => pickHomeTip(Number(homepick)));
       return;
     }
     const placepick: string | undefined = target.dataset.placepick;
@@ -2350,7 +2626,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     const delplace: string | undefined = target.dataset.delplace;
     if (delplace) {
-      deletePlace(delplace);
+      runWithContext(() => deletePlace(delplace));
       return;
     }
     const placego: string | undefined = target.dataset.placego;
@@ -2379,6 +2655,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       return;
     }
     if (target.dataset.role) {
+      authAttemptSequence += 1;
       state.role = target.dataset.role as MemoPathRole;
       render();
       return;
@@ -2427,6 +2704,11 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       } else {
         state.dashboard = null;
         state.geofence = null;
+        state.contacts = []; state.trips = []; state.places = []; state.alerts = []; state.movements = [];
+        state.vitals = { latest: null, trend: [] }; state.vitalsLoaded = false;
+        state.placeDraft = null; state.editingPlaceId = ''; state.addingPlace = false;
+        state.homeTips = []; state.mapTips = []; state.destTips = []; state.placeTips = [];
+        state.navDestination = ''; state.navPos = null; homePosCache = null; disposeMaps();
         void loadScreenData(state.screen);
       }
       render();
@@ -2444,7 +2726,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     }
     const action: string | undefined = target.dataset.action;
     if (action) {
-      void runAction(action);
+      runWithContext(() => runAction(action));
       return;
     }
     if (target.hasAttribute('data-close')) {
@@ -2511,21 +2793,35 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     else if (field === 'newPlaceLabel') state.newPlaceLabel = value;
     else if (field === 'homeSearch') {
       state.homeSearchText = value;
+      const sequence = ++suggestionSequences.home;
+      state.homeTips = [];
+      renderSuggestPanel(app.querySelector('[data-homesuggest]'), [], 'homepick');
       window.clearTimeout(homeSearchTimer);
-      homeSearchTimer = window.setTimeout(() => void suggestHome(value), 300);
+      homeSearchTimer = window.setTimeout(() => void suggestHome(value, sequence), 300);
     }
     else if (field === 'placeSearch') {
       state.placeSearchText = value;
+      const sequence = ++placeSearchSequence;
+      state.placeSearchStatus = value.trim().length > 0 ? 'searching' : 'idle';
+      state.placeTips = [];
+      renderSuggestPanel(app.querySelector('[data-placesuggest]'), [], 'placepick');
+      updatePlaceSearchStatus();
       window.clearTimeout(placeSearchTimer);
-      placeSearchTimer = window.setTimeout(() => void suggestPlaceSearch(value), 300);
+      placeSearchTimer = window.setTimeout(() => void suggestPlaceSearch(value, sequence), 300);
     }
     else if (field === 'mapsearch') {
+      const sequence = ++suggestionSequences.map;
+      state.mapTips = [];
+      renderSuggestPanel(app.querySelector('[data-mapsuggest]'), [], 'mappick');
       window.clearTimeout(mapSearchTimer);
-      mapSearchTimer = window.setTimeout(() => void suggestMap(value), 300);
+      mapSearchTimer = window.setTimeout(() => void suggestMap(value, sequence), 300);
     } else if (field === 'destination') {
       state.tripForm = { ...state.tripForm, destination: value };
+      const sequence = ++suggestionSequences.destination;
+      state.destTips = [];
+      renderSuggestPanel(app.querySelector('[data-destsuggest]'), [], 'destpick');
       window.clearTimeout(destSearchTimer);
-      destSearchTimer = window.setTimeout(() => void suggestDestination(value), 300);
+      destSearchTimer = window.setTimeout(() => void suggestDestination(value, sequence), 300);
     }
     else if (field === 'tripDate') state.tripForm = { ...state.tripForm, tripDate: value };
     else if (field === 'startTime') state.tripForm = { ...state.tripForm, startTime: value };
@@ -2541,11 +2837,12 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   /** Refresh restoration trusts me before any business request. */
   if (getToken()) {
     const generation = identityGeneration;
+    const restorationToken = getToken(); const attempt = authAttemptSequence;
     void memoApi.me().then(verified => {
-      if (!active || generation !== identityGeneration) return;
+      if (!active || generation !== identityGeneration || restorationToken !== getToken() || attempt !== authAttemptSequence) return;
       clearIdentityData(); authenticatedRole = verified.role; authenticatedIsDemo = verified.isDemo === true; state.role = verified.role;
       nav(verified.role === 'elder' ? 'elderHome' : 'familyHome');
-    }).catch(error => { if (active && generation === identityGeneration) handleApiError(error); });
+    }).catch(error => { if (active && generation === identityGeneration && restorationToken === getToken() && attempt === authAttemptSequence) handleApiError(error); });
   }
 
   return () => {

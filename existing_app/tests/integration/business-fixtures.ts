@@ -3,17 +3,21 @@
  */
 import assert from 'node:assert/strict';
 import { api, fixtureAccount, migrateTestDatabase, startTestServer, testDatabase } from './helpers';
-export async function businessFixture() {
+export async function businessFixture(port = 3102) {
   migrateTestDatabase();
   const db = testDatabase();
-  const server = await startTestServer();
+  const server = await startTestServer(port);
   const keys = ['care_a', 'care_b', 'care_e', 'care_other_e'].map(fixtureAccount);
   const identities: { accountId: string; token: string }[] = [];
   async function close() {
     await server.close();
     const rows = await db`SELECT id FROM memopath_account WHERE account_key IN ${db(keys)}`;
+    // Remove all owned elders first: cross-fixture care invitations can target
+    // another fixture account with RESTRICT, independently of row order.
     for (const row of rows) {
       await db`DELETE FROM memopath_elder WHERE owner_account_id=${row.id}`;
+    }
+    for (const row of rows) {
       await db`DELETE FROM memopath_setting WHERE account_id=${row.id}`;
       await db`DELETE FROM memopath_account WHERE id=${row.id}`;
     }

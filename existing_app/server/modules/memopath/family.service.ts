@@ -27,6 +27,7 @@ import type {
   MemoPathMovementRecord,
   MemoPathPlaceInput,
   MemoPathPlaceRecord,
+  MemoPathPlaceUpdateInput,
   MemoPathSettingConfig,
   MemoPathTripInput,
   MemoPathTripRecord,
@@ -294,6 +295,42 @@ export class MemoPathFamilyService {
     });
   }
 
+  async updatePlace(principal: MemoPrincipal, id: string, dto: MemoPathPlaceUpdateInput): Promise<MemoPathPlaceRecord> {
+    const [existing] = await this.db.select({ elderId: memopathPlace.elderId })
+      .from(memopathPlace).where(eq(memopathPlace.id, id)).limit(1);
+    if (!existing) throw new NotFoundException('常去地点不存在');
+    return this.elderService.withElderWrite(principal, existing.elderId, true, async tx => {
+      const patch: Partial<typeof memopathPlace.$inferInsert> = {};
+      for (const key of ['label', 'icon', 'placeType', 'beaconStatus', 'address', 'lng', 'lat'] as const) {
+        if (dto[key] !== undefined) patch[key] = dto[key] as never;
+      }
+      if (Object.keys(patch).length === 0) throw new BadRequestException('未提供可更新字段');
+      patch.updatedAt = new Date();
+      patch.updatedBy = principal.accountId;
+      const [row] = await tx.update(memopathPlace).set(patch)
+        .where(and(eq(memopathPlace.id, id), eq(memopathPlace.elderId, existing.elderId))).returning();
+      if (!row) throw new NotFoundException('常去地点不存在');
+      return {
+        id: row.id, elderId: row.elderId, label: row.label, icon: row.icon,
+        placeType: row.placeType as MemoPathPlaceRecord['placeType'],
+        beaconStatus: row.beaconStatus as MemoPathPlaceRecord['beaconStatus'],
+        address: row.address, lng: row.lng ?? 0, lat: row.lat ?? 0,
+      };
+    });
+  }
+
+  async deletePlace(principal: MemoPrincipal, id: string): Promise<void> {
+    const [existing] = await this.db.select({ elderId: memopathPlace.elderId })
+      .from(memopathPlace).where(eq(memopathPlace.id, id)).limit(1);
+    if (!existing) throw new NotFoundException('常去地点不存在');
+    await this.elderService.withElderWrite(principal, existing.elderId, true, async tx => {
+      const deleted = await tx.delete(memopathPlace)
+        .where(and(eq(memopathPlace.id, id), eq(memopathPlace.elderId, existing.elderId)))
+        .returning({ id: memopathPlace.id });
+      if (deleted.length === 0) throw new NotFoundException('常去地点不存在');
+    });
+  }
+
   async listAlerts(principal: MemoPrincipal, elderId: string): Promise<MemoPathAlertRecord[]> {
     await this.elderService.assertAccess(principal, elderId);
     const rows = await this.db
@@ -394,7 +431,7 @@ export class MemoPathFamilyService {
     await tx.insert(memopathTrip).values([
       {
         elderId,
-        destination: '法國醫院',
+        destination: '圣德肋撒医院',
         tripDate: '2026-10-02',
         startTime: '10:00',
         endTime: '12:00',

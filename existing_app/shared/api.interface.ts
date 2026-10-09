@@ -152,9 +152,11 @@ export interface MemoPathPlaceInput {
   placeType: 'frequent' | 'beacon';
   beaconStatus: 'safe' | 'strange';
   address: string;
-  lng: number;
-  lat: number;
+  lng?: number;
+  lat?: number;
 }
+
+export type MemoPathPlaceUpdateInput = Partial<Omit<MemoPathPlaceInput, 'elderId'>>;
 
 export interface MemoPathPlaceListResponse {
   items: MemoPathPlaceRecord[];

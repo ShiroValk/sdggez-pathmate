@@ -10,6 +10,41 @@ import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node
 import { spawn, spawnSync } from 'node:child_process';
 import postgres from 'postgres';
 import { testDatabase } from './helpers';
+const recovery = createRequire(join(process.cwd(), 'package.json'))('./scripts/recovery.cjs') as {
+  requiredRestoreSpace(bytes: number): number;
+  assertRestoreSpace(available: number, required: number, location: string): void;
+  verifyRestorePrerequisites(file: string, containerId: string): unknown;
+};
+test('restore preflight rejects missing archives and insufficient measured capacity before restore work', () => {
+  const required = recovery.requiredRestoreSpace(1024);
+  assert.equal(required, 3 * 1024 + 64 * 1024 * 1024);
+  recovery.assertRestoreSpace(required, required, 'fixture');
+  assert.throws(() => recovery.assertRestoreSpace(required - 1, required, 'fixture'), /free space is insufficient/u);
+  assert.throws(() => recovery.requiredRestoreSpace(0), /archive is empty/u);
+  assert.throws(() => recovery.requiredRestoreSpace(Number.MAX_SAFE_INTEGER), /supported preflight range/u);
+  assert.throws(() => recovery.verifyRestorePrerequisites(join(process.cwd(), '.local-backups', 'not-present.dump'), '0'.repeat(64)), /archive or local backup directory access/u);
+});
+
+test('restore preflight rejects unreadable input without copying or changing the archive', () => {
+  const require = createRequire(join(process.cwd(), 'package.json'));
+  const fs = require('node:fs') as typeof import('node:fs');
+  const file = join(process.cwd(), '.local-backups', `access_fixture_${randomUUID()}.dump`);
+  mkdirSync(join(process.cwd(), '.local-backups'), { recursive: true });
+  const bytes = Buffer.from('synthetic archive access fixture');
+  writeFileSync(file, bytes);
+  const original = fs.accessSync;
+  try {
+    fs.accessSync = ((target: import('node:fs').PathLike, mode?: number) => {
+      if (target === file) throw Object.assign(new Error('controlled unreadable fixture'), { code: 'EACCES' });
+      original(target, mode);
+    }) as typeof fs.accessSync;
+    assert.throws(() => recovery.verifyRestorePrerequisites(file, '0'.repeat(64)), /access could not be verified/u);
+    assert.deepEqual(readFileSync(file), bytes);
+  } finally {
+    fs.accessSync = original;
+    fs.unlinkSync(file);
+  }
+});
 test('migration locks/drift/rollback and official archive recovery protect source and sessions', async () => {
   const c = createRequire(join(process.cwd(),'package.json'))('./scripts/config.cjs'); c.loadEnvironment();
   const cfg = c.readConfig(process.env,{requireTestDatabase:true});

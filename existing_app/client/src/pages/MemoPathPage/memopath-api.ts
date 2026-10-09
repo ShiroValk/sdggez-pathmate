@@ -23,6 +23,7 @@ import type {
   MemoPathPlaceInput,
   MemoPathPlaceListResponse,
   MemoPathPlaceRecord,
+  MemoPathPlaceUpdateInput,
   MemoPathRegisterRequest,
   MemoPathSettingConfig,
   MemoPathSettingResponse,
@@ -243,6 +244,15 @@ export const memoApi = {
       headers: authHeaders(),
     });
     return res.data;
+  },
+
+  async updatePlace(id: string, patch: MemoPathPlaceUpdateInput): Promise<MemoPathPlaceRecord> {
+    const res = await axiosForBackend.patch(`/api/memopath/places/${encodeURIComponent(id)}`, patch, { headers: authHeaders() });
+    return res.data;
+  },
+
+  async deletePlace(id: string): Promise<void> {
+    await axiosForBackend.delete(`/api/memopath/places/${encodeURIComponent(id)}`, { headers: authHeaders() });
   },
 
   async listAlerts(elderId: string): Promise<MemoPathAlertListResponse> {
