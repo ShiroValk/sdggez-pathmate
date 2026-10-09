@@ -31,7 +31,7 @@
 
 - [ ] T004 在 D/evidence-index.md 将research的REUSE-01–08逐项链接到 `specs/002-remove-platform-dependency/verification.md` 最新有效章节、原测试/截图及代码版本，核对相关diff/hash/场景条件（FR-006/014，章程II）；完成条件为每项有可复用/需增量/阻塞/被校正结论及理由，最新有效场景优先、历史失败保留，manual-auth-validation不当通过证据，76/76不等于全部FR/SC合格。
 - [ ] T005 在 D/working/record-rules.md 固化SRC/REQ/SUP/CAP/EVD/FND/COV/CON/DSP/HND/DEC字段和上列原样枚举、引用/去重/统计规则（FR-004/019/020，SC-005/008）；证据为D/data-model.md及交付合同，完成条件为一个需求多环节不重复完成计数、发现唯一主分类、疑点与可选独立，不设计未来业务字段。
-- [ ] T006 在 D/working/validation-matrix.md 建立适用场景及复用/增量门禁矩阵：成功、无数据/旧数据、输入异常、授权关闭、跨账号/角色、离线/依赖失败、重复/并发、香港跨日（FR-014/018，章程II/III）；证据关联REUSE/EVD，完成条件为每格标适用范围、已有证据或未覆盖理由、所需条件、最小复核方法及风险，不把全量测试列必做。
+- [ ] T006 在 D/working/validation-matrix.md 建立适用场景及复用/增量门禁矩阵：成功、无数据/旧数据、输入异常、授权关闭、跨账号/角色、离线/依赖失败、重复/并发、香港跨日（FR-014/018，章程II/III）；证据关联REUSE/EVD；为每个增量验证场景分配唯一VAL编号，记录关联REQ/CAP/FND、触发理由、范围、条件、执行任务、EVD及当前状态。同一场景仅指定一个执行任务；T016、T020、T035及T039优先引用已有适用证据，其他任务不得重复运行该场景。只有相关变化、证据矛盾或覆盖不足时，才记录理由并重新验证；完成条件为每格标适用范围、已有证据或未覆盖理由、所需条件、最小复核方法及风险，不把全量测试列必做，每个需执行场景有唯一执行归属；未触发、阻塞、已验证分别记录，场景记录完成不等于运行通过。
 - [ ] T007 在 D/working/coverage-map.md 将001 FR-001–023、SC-001–009、十类FR-018领域、七原则三基线、五条链路及USR-ROUTE-01–07映射到任务和交付文件（FR-016/021/022，SC-007）；证据为spec/plan/交付合同，完成条件为无缺行，USR与PRD分母独立、任务依赖和记录归属清楚。
 
 ## Phase 3: US1 — 以PRD看清当前能力（P1，评估MVP）
@@ -102,7 +102,7 @@
 
 ## Phase 7: Polish — 完整交付与审阅
 
-- [ ] T046 检查 D/requirements-matrix.md、D/findings.md、D/inspection-coverage.md、D/constitution-review.md、D/disposition.md、D/evidence-index.md、D/decisions.md、D/development-handoff.md 和 D/report.md 的ID/引用/数量/枚举/全部FR及SC映射，在 D/working/delivery-review.md 记录（FR-016/019/021/022/023，SC-001–005/007–009）；完成条件为十领域/七原则三基线/五链路/九项交付齐全，未验证和可选清楚、模型合同未变成业务设计。
+- [ ] T046 检查 D/requirements-matrix.md、D/findings.md、D/inspection-coverage.md、D/constitution-review.md、D/disposition.md、D/evidence-index.md、D/decisions.md、D/development-handoff.md 和 D/report.md 的ID/引用/数量/枚举/全部FR及SC映射，在 D/working/delivery-review.md 记录（FR-016/019/021/022/023，SC-001–005/007–009）；将T020、T035及路线调查产生的新证据或结论变更，回写到 D/requirements-matrix.md 对应REQ/CAP的实现状态、验证程度、EVD、处置及FND引用，并同步 D/inspection-coverage.md、D/disposition.md 和 D/report.md。保留原结论及变更依据，不删除历史失败；完成条件为十领域/七原则三基线/五链路/九项交付齐全，未验证和可选清楚、模型合同未变成业务设计，同一能力在需求对照、发现、处置、覆盖记录和摘要中采用一致的有效结论；新增证据未改变结论时也记录复核结果。
 - [ ] T047 邀请一名未参与评估的团队成员或用户指定审阅者，按15分钟定位可复用基础、前三优先缺口及理由的场景审阅 D/report.md 与 D/development-handoff.md，在 D/working/handoff-review.md 记录人/日期/时间/反馈（SC-006，章程II）；完成条件为实际审阅证据和必要文档修订，无法安排时标SC-006尚未验证/补审步骤且任务不冒充通过，不擅自向外部人员发消息。
 - [ ] T048 按D/quickstart.md复核全部文档路径/链接和差异，运行 `git diff --check`，将T047及其他未验门禁如实更新 D/working/delivery-review.md 和 D/report.md（FR-001/014/016/017，章程II）；完成条件为适用文档检查通过、受保护原规格/章程/002/业务未变、现有成果未清理，不把文档检查当应用测试或完整规格通过。
 - [ ] T049 审阅Git diff/staged和当前001指针，按AGENTS.md及实际启用的Git钩子仅提交本阶段评估资料检查点，在 D/evidence-index.md 记录范围与验证（FR-017/023，章程II/治理）；完成条件为不卷入无关或002已有成果、不调用002converge、不推送/部署/业务开发，未验证条件完整保留。
@@ -115,12 +115,16 @@ T007 → (T008 || T009) → T010 → T011 → T012 → T013 → T014 → T015 �
 T007 + T008/T009的稳定REQ与决策索引 → (T018 || T019) → T020 → T021 → T022 → T023 → T024
 T007 → (T025 || T026) → T027 → T028 → T029 → T030 → T031 → T032 → T033 → T034 → T035 → T036
 T007 → (T037 || T038) → T039 → T040 → T041 → T042
-T017 + T024 + T036 + T042 → T043 → T044 → T045 → T046 → T047 → T048 → T049
+T017 + T024 + T036 + T042 → T043 → T044 → T045 → T046
+T046 → T047
+T046 → T048 → T049
 ```
 
 US1可先独立交付MVP；US2需稳定需求索引，不需等待US1全部链路。US3可按SUP/章程独立开始，涉及PRD关联在T034整合；US4路线只读调查可提前，完整清单/排序/报告依赖US1–US3。T023与T034共写findings.md，必须串行；T016/T020/T035会写证据索引，串行归并；T019后才运行验证。阶段分开不表示后阶段所有检查必须等前阶段完全结束。
 
-T016/T020/T035/T039的“执行验证”均受门禁和环境约束；允许记录不执行或阻塞，但不消除缺少的验收证据。T041比较资料完成不等于用户已选择方案；T044中依赖选择的未来设计继续待定。T047无人可审时保留未勾选及SC-006待验，不能据文档齐全称全部评估验收通过。
+T016/T020/T035/T039的“执行验证”均受门禁和环境约束；允许记录不执行或阻塞，但不消除缺少的验收证据。T041比较资料完成不等于用户已选择方案；T044中依赖选择的未来设计继续待定。
+
+T047的实际审阅是SC-006通过的必要条件，但不阻止T048记录限制、检查文档或T049提交阶段成果。T048必须记录T047为已完成、进行中或阻塞；未完成时保留T047未勾选及SC-006待验，不宣布001全部验收通过。审阅反馈到达后，更新相关文档并重新执行受影响的T048检查，再提交后续检查点。
 
 ## Parallel Examples
 
