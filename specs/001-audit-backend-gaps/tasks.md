@@ -4,7 +4,7 @@
 
 **生成日期**: 2026-10-09（Asia/Hong_Kong） | **Git分支**: `chore/spec-kit-git-workflow` | **生成基线**: `73acf9d8f9f9d4cb5a700b87597ea1bc93ed94c2` | **Spec Kit目录**: `specs/001-audit-backend-gaps`。
 
-**执行边界**: 本清单的“实施”是执行检查和交付评估资料，不是业务开发。本轮只生成任务，所有任务保持未勾选。001规格、章程及002资料只读；不修改existing_app业务代码/注释/运行文档/测试实现，不新增功能、安装依赖、修复迁移、重构、部署或操作真实用户数据。002再次converge及收尾继续暂缓，历史Key处置决定和环境限制保持。
+**执行边界**: 本清单的“实施”是执行检查和交付评估资料，不是业务开发。任务生成时全部未勾选；2026-10-09开始执行，按实际证据更新完成状态。001规格、章程及002资料只读；不修改existing_app业务代码/注释/运行文档/测试实现，不新增功能、安装依赖、修复迁移、重构、部署或操作真实用户数据。002再次converge及收尾继续暂缓，历史Key处置决定和环境限制保持。
 
 ## 格式、证据及完成规则
 
@@ -21,18 +21,18 @@
 
 **目的**：确认001、保留当前成果，定位真实输入；不是初始化应用或安装环境。
 
-- [ ] T001 核对Git分支/status/staged及Process/User/Machine的SPECIFY_INIT_DIR、SPECIFY_FEATURE_DIRECTORY、SPECIFY_FEATURE、SPECIFY_FEATURE_NO_PERSIST，运行 `.specify/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly`，在 D/evidence-index.md 记录结果（FR-001/017）；证据为脱敏环境检查和JSON；完成条件为FEATURE_DIR/FEATURE_SPEC明确指向001、分支另记、覆盖指针问题已纠正后才继续，002没有被操作。
-- [ ] T002 在 D/evidence-index.md 建立SRC基线，记录HEAD/dirty差异、001规划与原规格、`docs/PRD (1).pdf`、`.specify/memory/constitution.md`、当前业务相关文件hash及缺失材料（FR-001，章程II）；证据为路径/版本/hash/日期，完成条件为结论适用材料可复核，原文件与当前未提交/忽略成果保持，旧source-context只标历史线索。
-- [ ] T003 阅读 D/quickstart.md 和 D/contracts/assessment-delivery.md，在 D/evidence-index.md 记录操作边界、已有测试保护条件和环境限制（FR-014/017/023，章程I/II）；证据引用002最新Key暂缓、内置定位/Chrome历史阻塞及Edge手动范围，完成条件为不执行安装/迁移/服务清理/002收尾，记录无法验证条件且不把环境限制当产品缺失。
+- [X] T001 核对Git分支/status/staged及Process/User/Machine的SPECIFY_INIT_DIR、SPECIFY_FEATURE_DIRECTORY、SPECIFY_FEATURE、SPECIFY_FEATURE_NO_PERSIST，运行 `.specify/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly`，在 D/evidence-index.md 记录结果（FR-001/017）；证据为脱敏环境检查和JSON；完成条件为FEATURE_DIR/FEATURE_SPEC明确指向001、分支另记、覆盖指针问题已纠正后才继续，002没有被操作。
+- [X] T002 在 D/evidence-index.md 建立SRC基线，记录HEAD/dirty差异、001规划与原规格、`docs/PRD (1).pdf`、`.specify/memory/constitution.md`、当前业务相关文件hash及缺失材料（FR-001，章程II）；证据为路径/版本/hash/日期，完成条件为结论适用材料可复核，原文件与当前未提交/忽略成果保持，旧source-context只标历史线索。
+- [X] T003 阅读 D/quickstart.md 和 D/contracts/assessment-delivery.md，在 D/evidence-index.md 记录操作边界、已有测试保护条件和环境限制（FR-014/017/023，章程I/II）；证据引用002最新Key暂缓、内置定位/Chrome历史阻塞及Edge手动范围，完成条件为不执行安装/迁移/服务清理/002收尾，记录无法验证条件且不把环境限制当产品缺失。
 
 ## Phase 2: Foundational — 证据复用与统一记录
 
 **门禁**：T001–T007完成后进入故事阶段。记录模板是评估文档模型，不是业务模型/API。
 
-- [ ] T004 在 D/evidence-index.md 将research的REUSE-01–08逐项链接到 `specs/002-remove-platform-dependency/verification.md` 最新有效章节、原测试/截图及代码版本，核对相关diff/hash/场景条件（FR-006/014，章程II）；完成条件为每项有可复用/需增量/阻塞/被校正结论及理由，最新有效场景优先、历史失败保留，manual-auth-validation不当通过证据，76/76不等于全部FR/SC合格。
-- [ ] T005 在 D/working/record-rules.md 固化SRC/REQ/SUP/CAP/EVD/FND/COV/CON/DSP/HND/DEC字段和上列原样枚举、引用/去重/统计规则（FR-004/019/020，SC-005/008）；证据为D/data-model.md及交付合同，完成条件为一个需求多环节不重复完成计数、发现唯一主分类、疑点与可选独立，不设计未来业务字段。
-- [ ] T006 在 D/working/validation-matrix.md 建立适用场景及复用/增量门禁矩阵：成功、无数据/旧数据、输入异常、授权关闭、跨账号/角色、离线/依赖失败、重复/并发、香港跨日（FR-014/018，章程II/III）；证据关联REUSE/EVD；为每个增量验证场景分配唯一VAL编号，记录关联REQ/CAP/FND、触发理由、范围、条件、执行任务、EVD及当前状态。同一场景仅指定一个执行任务；T016、T020、T035及T039优先引用已有适用证据，其他任务不得重复运行该场景。只有相关变化、证据矛盾或覆盖不足时，才记录理由并重新验证；完成条件为每格标适用范围、已有证据或未覆盖理由、所需条件、最小复核方法及风险，不把全量测试列必做，每个需执行场景有唯一执行归属；未触发、阻塞、已验证分别记录，场景记录完成不等于运行通过。
-- [ ] T007 在 D/working/coverage-map.md 将001 FR-001–023、SC-001–009、十类FR-018领域、七原则三基线、五条链路及USR-ROUTE-01–07映射到任务和交付文件（FR-016/021/022，SC-007）；证据为spec/plan/交付合同，完成条件为无缺行，USR与PRD分母独立、任务依赖和记录归属清楚。
+- [X] T004 在 D/evidence-index.md 将research的REUSE-01–08逐项链接到 `specs/002-remove-platform-dependency/verification.md` 最新有效章节、原测试/截图及代码版本，核对相关diff/hash/场景条件（FR-006/014，章程II）；完成条件为每项有可复用/需增量/阻塞/被校正结论及理由，最新有效场景优先、历史失败保留，manual-auth-validation不当通过证据，76/76不等于全部FR/SC合格。
+- [X] T005 在 D/working/record-rules.md 固化SRC/REQ/SUP/CAP/EVD/FND/COV/CON/DSP/HND/DEC字段和上列原样枚举、引用/去重/统计规则（FR-004/019/020，SC-005/008）；证据为D/data-model.md及交付合同，完成条件为一个需求多环节不重复完成计数、发现唯一主分类、疑点与可选独立，不设计未来业务字段。
+- [X] T006 在 D/working/validation-matrix.md 建立适用场景及复用/增量门禁矩阵：成功、无数据/旧数据、输入异常、授权关闭、跨账号/角色、离线/依赖失败、重复/并发、香港跨日（FR-014/018，章程II/III）；证据关联REUSE/EVD；为每个增量验证场景分配唯一VAL编号，记录关联REQ/CAP/FND、触发理由、范围、条件、执行任务、EVD及当前状态。同一场景仅指定一个执行任务；T016、T020、T035及T039优先引用已有适用证据，其他任务不得重复运行该场景。只有相关变化、证据矛盾或覆盖不足时，才记录理由并重新验证；完成条件为每格标适用范围、已有证据或未覆盖理由、所需条件、最小复核方法及风险，不把全量测试列必做，每个需执行场景有唯一执行归属；未触发、阻塞、已验证分别记录，场景记录完成不等于运行通过。
+- [X] T007 在 D/working/coverage-map.md 将001 FR-001–023、SC-001–009、十类FR-018领域、七原则三基线、五条链路及USR-ROUTE-01–07映射到任务和交付文件（FR-016/021/022，SC-007）；证据为spec/plan/交付合同，完成条件为无缺行，USR与PRD分母独立、任务依赖和记录归属清楚。
 
 ## Phase 3: US1 — 以PRD看清当前能力（P1，评估MVP）
 
