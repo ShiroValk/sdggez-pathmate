@@ -40,4 +40,4 @@ Get-ChildItem Env: | Where-Object Name -Match 'SPECIFY|SPECKIT'
 
 ## 5. 交付复核
 
-核对ID唯一、引用、全部FR/SC覆盖、统计去重、可选独立、章程及开发依赖。抽样检查完整链路及一项PRD外行为，安排15分钟独立交接审阅。文档检查用 `git diff --check`；本阶段无业务变更，不默认重跑lint/build或002收尾。
+核对ID唯一、引用、全部FR/SC覆盖、统计去重、可选独立、章程及开发依赖。抽样检查完整链路及一项PRD外行为，T047独立交接审阅已于2026-10-11由用户批准跳过，无需安排。文档检查用 `git diff --check`；本阶段无业务变更，不默认重跑lint/build或002收尾。

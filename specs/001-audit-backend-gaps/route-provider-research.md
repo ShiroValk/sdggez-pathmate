@@ -70,3 +70,5 @@ Google [官方价格表](https://developers.google.com/maps/billing-and-pricing/
 发现新的官方候选资料：[地政总署3D行人网络](https://data.gov.hk/en-data/dataset/hk-landsd-openmap-3d-pedestrian-network)介绍含轮椅可达性和障碍信息；[CSDI步行路线API](https://portal.csdi.gov.hk/csdi-webpage/apidoc/3d-pedestrian-route-search)有点到点3D步行服务。这里只确认文档和数据目录存在，未下载检查字段覆盖、未调用香港实际样本、未确认账户/配额/展示许可或设施实时性。可作为A＋D街道/站内证据缺口的补充调查，不等于已实现无障碍或免费集成。缺标签/冲突/不新鲜仍保持未知。
 
 地区按资料充足程度筛选，用户已纠正原“咨询”笔误，故不采用咨询帖/景点人气排名。推荐尖东/尖沙咀有限试点及官方资料、备选比较、复检条件见[试点筛选](working/pilot-selection.md)。这个推荐是有界资料比较，未穷尽全港，也不声称该区资料数量全港第一。
+
+2026-10-11用户已确认高德账号有有效免费额度；来源为用户确认，具体类别/余额/到期日及许可仍未独立核对，后续调用前检查，不自动启用付费。
