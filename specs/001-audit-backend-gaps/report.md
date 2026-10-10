@@ -67,3 +67,5 @@ T001–046、T048/049共48项实际完成；T047于2026-10-11经用户批准跳�
 [需求对照](requirements-matrix.md) → [发现](findings.md) → [检查覆盖](inspection-coverage.md) / [章程核对](constitution-review.md) → [五类处置](disposition.md) → [证据索引](evidence-index.md) / [决定](decisions.md) → [首功能开发交接](development-handoff.md) / [方案比较](route-provider-research.md)。SC-006免除决定见[handoff-review](working/handoff-review.md)。评估模型/合同只定义这些记录，不是未来业务实体或API。
 
 2026-10-11用户已确认高德账号有有效免费额度；来源为用户确认，具体类别/余额/到期日及许可仍未独立核对，后续调用前检查，不自动启用付费。
+
+2026-10-11用户说明不能安排实地核验，要求一次性归并所有需确认事项而非逐个停下询问。当前继续官方公开资料/数据及运营规则逐段核对，不当作实地证据；可信资料未覆盖的路段、设施或车辆保持部分/不足，已确认全程样本仍为0，USR-07真实样本门禁不自动免除。问题与技术查证分工统一见[待确认清单](working/user-confirmation-list.md)，已批准事项不重复询问。
