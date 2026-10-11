@@ -71,3 +71,13 @@
 - H03：[001当前路线](../001-audit-backend-gaps/working/route-current-review.md)及[模拟缺陷检查](../001-audit-backend-gaps/evidence/inspection-validation.md)，支持修正需求，不当真实故障或003修复通过。
 
 **当前003运行通过数**：0。**真實全程已確認樣本**：0。**規劃文件完整度**與**实现／运行验收完成率**分开，下一阶段按V实际填证，不预先创建空截图或伪造运行结果。
+
+## 實作基線與門禁（2026-10-11）
+
+- T001：開始commit `462080c`，分支及feature均003，開始時工作區乾淨；Node v24.19.0、npm 11.17.0，既有node_modules可用，3000／5173均無監聽。只核配置是否有地圖Key及独立本機_test庫，兩項均有；未輸出憑據、未改配置、未安裝／啟動服務或遷移。忽略規則已覆蓋依賴、產物、環境、Docker及ESLint，package為private、不需npm發佈ignore。
+- T002／V09：使用者先前確認免費額度；本輪仍缺帳號當次Web Service／JS類別、餘額／期限及付費超額設定證據。已請求脫敏資料，真實調用暫記blocked；不以有Key當免費核查通过。
+- T003：批准公開來源的有界查閱與許可結果見research；設施正文不打包，只連來源。完整歷史payload不可取得，真實回放暫緩；不構造假歷史。
+- T004：V01–V12統一記操作、日期、代碼／產物、來源、預期／實際、退出碼／截圖與限制。真實清單為D01或D02各三方式、必要時D03補、D04換乘，每項一次及最多一次有理由手動重試；門禁解除前請求數0。所有31項驗收仍未運行，純測試通過只填其範圍，不改live狀態。
+- 使用者本輪答覆：「先进行其他部分，这个我再确认后告知」。高德私有權益核查保持blocked，按授權繼續其他部分。
+- F01（V01/V05純邏輯）：新增route-model／route-state與route-state.test.ts；6項斷言全部通過，退出碼0；client type check退出碼0。涵蓋0值／缺值／enum、前置requestId、舊成功／錯誤、身份／視圖／地圖epoch、loading需求切換、A→B→A批次不變及舊評估拒絕、請求前null來源。未作UI或live驗收。
+- F02（V01/V02純解析）：route-model.test.ts＋state共11項通過，退出碼0；含幾何斷點、合法空方案／provider失敗／畸形集合、原方案與呈現分開、同段备选／換乘／未知段／不造ETA。`npm.cmd run lint`退出碼0（ESLint、Stylelint、server/client型別）；未執行外部服務或UI驗收。模型／狀態為可測試基礎，不據此改FR／SC整合狀態。
