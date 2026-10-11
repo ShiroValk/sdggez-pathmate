@@ -46,8 +46,8 @@ sourceKind：E01純邏輯合成；E02受控simulated＋static來源連結；E03�
 | FR-019 | DeliveryScopeRow，V11/V12 | 每能力来源／证据／暂緩原因影响，真静模分开 | implemented；本31行逐項 source／證據／限制；E01–E05 實際運行與歷史分開 |
 | FR-020 | plan范围，V12 | 全程真实样本0可交付限度，三项非前置 | implemented；E02 全程真實確認0、實地0、維護0仍可演示受控提示；不降低真實confirmed門檻 |
 | FR-021 | R06/C02，V09 | 免费／许可查证或停调用／打包，不付费或换服务 | implemented gate＋deferred live；ROUTE_LIVE_REVIEW.allowed=true（使用者新指示），私有免費設定仍未獨立核驗；不新增付費／服務，靜態正文停打包 |
-| FR-022 | C03/章程，V05/V10 | 既有身份隔离／共享／位置／语音／手表边界保持 | partial verification；E02 API寫入0、E05無server/shared變更；E04 權限／auth／demo真實回歸受阻 |
-| FR-023 | C03/C04，V10/V11 | 公共API／职责保持，无DB；若需变更先方案确认 | implemented without contract/migration changes；E01/E02 舊型別／export與控制transport可用；E04 25API真實回歸尚未通過 |
+| FR-022 | C03/章程，V05/V10 | 既有身份隔离／共享／位置／语音／手表边界保持 | partial verification；E02 API寫入0、E05無server/shared變更；E07 權限／auth／demo真實SQL/HTTP回歸通過，真實身份切換瀏覽器尚未驗 |
+| FR-023 | C03/C04，V10/V11 | 公共API／职责保持，无DB；若需变更先方案确认 | implemented without contract/migration changes；E01/E02 舊型別／export與控制transport可用；E07 25API真實回歸通過 |
 
 ## SC逐项验收範圍表
 
@@ -70,7 +70,7 @@ sourceKind：E01純邏輯合成；E02受控simulated＋static來源連結；E03�
 - H02：[002运行](../002-remove-platform-dependency/verification.md)，已記錄22项及lint、Edge手动路线与环境限制；不是本次重新运行，不消除003缺口。
 - H03：[001当前路线](../001-audit-backend-gaps/working/route-current-review.md)及[模拟缺陷检查](../001-audit-backend-gaps/evidence/inspection-validation.md)，支持修正需求，不当真实故障或003修复通过。
 
-**本次運行**：E01新route測試19／19＋既有cache1／1；E02受控瀏覽器52／52；E03 lint/build退出碼0。E04四套業務回歸未通過，不能計入成功。**當次真實高德請求**：5（E06）；**真實全程確認樣本**：0。
+**本次運行**：E01新route測試19／19＋既有cache1／1；E02受控瀏覽器52／52；E03 lint/build退出碼0。E04首次受阻；恢復後E07四套業務回歸全通過。**當次真實高德請求**：5（E06）；**真實全程確認樣本**：0。
 
 ## 實作基線與門禁（2026-10-11）
 
@@ -94,12 +94,12 @@ sourceKind：E01純邏輯合成；E02受控simulated＋static來源連結；E03�
 
 1. 高德私有權益核查T002仍未完成；2026-10-11使用者明確要求直接用現有Key，已按其指示放行並記錄授權時間。不是宣稱已核實免費餘額／付費超額。E06完成5次真實HTTP；真實瀏覽器／JS地圖、自然錯誤及更多香港樣本仍未驗。
 2. 設施正文T034與完整歷史回放：未證明再利用許可／適用入口／來源有效期，歷史只有001文字而无原payload。僅提供3個官方靜態連結（日期未知＋查閱日），回放明示未完成；不復製官方內容或按摘要假造真實回放。
-3. 本機DB受阻T048：維持四套未通過；服務恢復後按quickstart逐套重跑，無需為本feature新增遷移。
+3. 本機DB原阻塞已解除（E07）：原容器／資料卷恢復健康，四套全部通過，T048完成；沒有本feature新遷移。
 4. 舊三入口／四搜尋完整UI、真實帳號、合法live＋static摘要等未驗場景保留T022/T028/T038/T040/T044/T047未勾，已驗子項見E01/E02。不得把語義上的guard或靜態review當實際全場景通過。
 
 ## 章程與交付審閱
 
-七原則核對：長者可讀原生控件／焦點與缺口（E02）；無障礙主張按證據限制（E01）；資料誠實分來源（E02）；隱私與照護授權沿既有邊界（E05，真實回歸E04受阻）；資源與免費使用門禁（E04）；責任與API保持（E05）；必要測試／可重現證據（E01–E04）。三基線維持受支持API、權限、服務邊界；沒有增代理或把前端模擬當後端保存。限制不需實地／全程已確認真實樣本／長期維護豁免，三项原本即非前置。
+七原則核對：長者可讀原生控件／焦點與缺口（E02）；無障礙主張按證據限制（E01）；資料誠實分來源（E02）；隱私與照護授權沿既有邊界（E05，真實SQL/HTTP回歸E07通過，瀏覽器身份場景仍有未驗）；資源與免費使用門禁（E04）；責任與API保持（E05）；必要測試／可重現證據（E01–E04）。三基線維持受支持API、權限、服務邊界；沒有增代理或把前端模擬當後端保存。限制不需實地／全程已確認真實樣本／長期維護豁免，三项原本即非前置。
 
 ## E06 現有高德Key授權與當次查詢（2026-10-11）
 
@@ -110,3 +110,11 @@ sourceKind：E01純邏輯合成；E02受控simulated＋static來源連結；E03�
 本次只讀復核：5432／3000／5173無監聽；docker compose ps無法連接dockerDesktopLinuxEngine（管道不存在）。這支持本機Docker資料庫服務未運行；不能由此判定資料損壞。四套回歸停在基礎设施前置：contracts檢25條API契約、permissions檢照護同意／資源隔離、auth檢註冊／会话／角色／登出及斷庫503、demo檢真實演示登入／持久化／隔離；前置失敗不代表這些业务断言实际失败，也不代表通過。未啟動或重設Docker／DB。恢復原有DB服務後再按quickstart重跑，不需要先改高德Key或業務代码。
 
 E06放行後再驗：20項純測試及52項受控UI通過；受控bundle顯式設allowed=false驗前置拒絕，後續mock transport放行，與產品目前allowed=true分開。npm build退出碼0，當次產物index-BCVhKAhY.js；無新增真實查詢，總數仍5。臨時查詢腳本已刪，只保留脫敏公共點結果。
+
+## E07 原服務恢復與四套回歸（2026-10-11）
+
+使用者要求恢復此前可用服務。啟動原Docker Desktop，再用compose start db啟動六日前已存在的existing_app-db-1及原命名資料卷；未up重建、down、刪卷或重設。初始57P03為PostgreSQL啟動期；其後healthy，pg_isready接受連線，db:check/status均ready/version0001/pending[]，獨立_test庫可連線且與開發庫不同。
+
+首次contracts重試停在服務ready逾時；有界脫敏診斷約7.75秒ready，清理診斷子進程後按contracts→permissions→auth→demo序列重跑，四套退出碼均0，共5／5 Node測試通過（contracts內覆蓋25條API）。沒有放寬斷言、增加逾時或修改業務代碼。合成資料與臨時測試服務按既有fixtures清理，未操作真實照護關聯。[當次恢復證據](evidence/service-recovery.json)。
+
+原本機應用以npm.cmd run dev恢復運行：3000後端及5173前端ready，三項只讀HTTP確認API／兩端memopath頁均200。保留Docker、資料庫與開發服務運行供使用者繼續操作；測試端口與診斷進程已結束。此恢復只解除E04的環境與SQL/HTTP回歸缺口，不補其他真實瀏覽器／資料许可／無障礙實地證據。

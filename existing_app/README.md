@@ -156,4 +156,4 @@ verify-baseline核对归档哈希与恢复receipt，在恢复库只新增并清�
 
 長者首頁有三方式预覽入口；公共點不需要定位前置，路線／輪椅評估使用獨立請求與選擇版本，離頁／身份／長者切換清除頁面結果。使用者已明確授權直接使用現有高德Key，真實路線與公共搜尋已放行（免費餘額／付費設定未獨立核驗）；明確選模擬才提供原創受控示意。設施僅官方靜態連結，歷史回放沒有合法完整payload，明示未完成。圖為分段幾何示意，無底圖／全程可達主張。無新DB、依賴或公開API變更。
 
-運行與限制見[003 quickstart](../specs/003-multimodal-accessibility/quickstart.md)及[31項交付證據](../specs/003-multimodal-accessibility/verification.md)。本次20項純邏輯＋52項受控UI通過，lint/build通過；contracts／permissions／auth／demo因原本_test資料庫連線拒絕未通過。不得以模擬取代當次真實查詢或正式後端驗收。
+運行與限制見[003 quickstart](../specs/003-multimodal-accessibility/quickstart.md)及[31項交付證據](../specs/003-multimodal-accessibility/verification.md)。本次20項純邏輯＋52項受控UI通過，lint/build通過；contracts／permissions／auth／demo首次因_test資料庫不可用而受阻；原Docker／DB恢復後四套已全部通過（E07）。不得以模擬取代當次真實查詢或正式後端驗收。

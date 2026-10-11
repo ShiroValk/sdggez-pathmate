@@ -85,4 +85,4 @@ V01/V02/V05/V06/V07受控数据仅证明相應逻辑；live覆盖、静态资料
 node --import tsx tests/integration/route-ui.validation.ts
 ```
 
-產出本feature evidence/browser-validation.json及browser-simulation.png；獨立临時profile／bundle／loopback服務在finally清理，無帳號夾具。Windows沙箱若不允許啟動Chrome或SWC路徑讀取，應對原命令請求執行權限，不改檢查以假稱通過。DB契約回歸本次受阻，待原本_test服務可用後逐套執行上述命令；不把受控返回或preview當真實後端證據。
+產出本feature evidence/browser-validation.json及browser-simulation.png；獨立临時profile／bundle／loopback服務在finally清理，無帳號夾具。Windows沙箱若不允許啟動Chrome或SWC路徑讀取，應對原命令請求執行權限，不改檢查以假稱通過。DB契約回歸首次受阻；原Docker／DB已恢復並逐套通過（E07），目前3000／5173服務運行。往後停機時先恢復Docker Desktop及原db容器，再執行上述命令；不把受控返回或preview當真實後端證據。

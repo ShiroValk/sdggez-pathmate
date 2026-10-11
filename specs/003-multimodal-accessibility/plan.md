@@ -4,7 +4,7 @@
 
 **Input**: `specs/003-multimodal-accessibility/spec.md`，以及本次用戶列明的七項規劃要求。
 
-**Status**: 設計與受控範圍實作完成；純模型、UI、lint/build證據見verification，真實調用／DB／合法資料回放保留暫緩。規劃基線 `7d34242`；Git分支與`.specify/feature.json`均指向003，環境變量無覆寫。setup-plan輸出中的BRANCH為目錄標記`003-multimodal-accessibility`，實際Git分支以以上全名為準。
+**Status**: 設計與受控範圍實作完成；純模型、UI、lint/build證據見verification，真實HTTP與DB回歸已取得證據；真實瀏覽器／合法資料回放仍保留限制。規劃基線 `7d34242`；Git分支與`.specify/feature.json`均指向003，環境變量無覆寫。setup-plan輸出中的BRANCH為目錄標記`003-multimodal-accessibility`，實際Git分支以以上全名為準。
 
 ## Summary
 

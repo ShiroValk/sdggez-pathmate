@@ -137,7 +137,7 @@
 **Purpose**: 相容／權限回歸、文檔／構建與一次有界故事，非全PRD重做。
 
 - [ ] T047 核 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts`／`memopath-engine.ts` 的legacy planRoute／AmpRoute／formatter與三舊導航，復檢四搜索入口JSON＋callback後的成功、錯誤、舊回調／重試／輸入保留／清理，於 `specs/003-multimodal-accessibility/verification.md` 記V10，不改公開字段／錯誤或職責。
-- [ ] T048 運行 `existing_app/tests/integration/position-cache.test.ts` 及既有contracts／permissions／auth／demo四套（獨立_test庫，dispatcher不含新route tests），核 `existing_app/server/`／`existing_app/shared/` 無新契約／遷移，脫敏網絡無新周期位置寫入、共享绕过／錄音／手表依賴，於 `specs/003-multimodal-accessibility/verification.md` 記V10及阻塞。
+- [X] T048 運行 `existing_app/tests/integration/position-cache.test.ts` 及既有contracts／permissions／auth／demo四套（獨立_test庫，dispatcher不含新route tests），核 `existing_app/server/`／`existing_app/shared/` 無新契約／遷移，脫敏網絡無新周期位置寫入、共享绕过／錄音／手表依賴，於 `specs/003-multimodal-accessibility/verification.md` 記V10及阻塞。
 - [X] T049 在 `existing_app/client/src/pages/MemoPathPage/route-model.ts`、`route-state.ts`、`route-accessibility.ts`、`route-preview-data.ts` 及被改amap／engine完善模塊／公共函數職責、輸入輸出、失敗、副作用／權限／來源／資源文檔，審 `specs/003-multimodal-accessibility/contracts/route-preview.md` 相容與回退；確需不相容／調職先具體方案確認，需遷移先完整回滾，不提前執行。
 - [X] T050 依 `specs/003-multimodal-accessibility/quickstart.md` 明確運行3個新route測試、`npm.cmd run lint`、`npm.cmd run build`，匹配產物做適用UI復檢；新改動／失敗才擴大測試，不無故重複全量，於 `specs/003-multimodal-accessibility/verification.md` 記V11退出碼／產物／範圍。
 - [ ] T051 用 `specs/003-multimodal-accessibility/quickstart.md` D01／D02主故事及D03／D04補充做一次V12，核窄屏／鍵盤、三方式／公交、依據缺口／失敗／明確來源；於 `specs/003-multimodal-accessibility/verification.md` 記步驟與暫緩影響，真實樣本0可接受、三個非前置計數0，無實地／維護／真救援。
@@ -243,4 +243,4 @@ US1→US2→US3→US4各適用測試／UI及證據後checkpoint；暫緩有原�
 
 ## 本次未勾項及可完成範圍
 
-T002/T020/T051：私有權益未獨立核驗，但使用者新指示已直接授權現有Key；E06完成D03三方式HTTP，真實瀏覽器／主公共點故事仍未執行。T034：許可／適用入口資料未明，僅靜態來源連結。T022/T028/T038/T040/T044/T047：純模型及52項受控UI子項已驗，未涵蓋全部真實帳號／live＋static／舊三導航四搜尋UI，保持未勾。T048：cache通過，四套DB回歸受阻。其餘勾項以verification E01–E05為範圍；T041完成的是合法缺料降級／原創模擬與連結，未交付回放或官方內容。T053於最終diff／links、清理與hook完成後核對。
+T002/T020/T051：私有權益未獨立核驗，但使用者新指示已直接授權現有Key；E06完成D03三方式HTTP，真實瀏覽器／主公共點故事仍未執行。T034：許可／適用入口資料未明，僅靜態來源連結。T022/T028/T038/T040/T044/T047：純模型及52項受控UI子項已驗，未涵蓋全部真實帳號／live＋static／舊三導航四搜尋UI，保持未勾。T048：cache通過，原服務恢復後四套DB回歸全部通過，見E07。其餘勾項以verification E01–E05為範圍；T041完成的是合法缺料降級／原創模擬與連結，未交付回放或官方內容。T053於最終diff／links、清理與hook完成後核對。
