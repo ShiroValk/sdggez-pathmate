@@ -67,7 +67,7 @@ specs/003-multimodal-accessibility/
 └── checklists/requirements.md
 ```
 
-`tasks.md`由下一階段speckit-tasks產生，本輪不建立。verification現為驗證設計及交付範圍表，非完成證據。
+`tasks.md`已由speckit-tasks產生，53項任務尚未執行。verification現為驗證設計及交付範圍表，非完成證據。
 
 ### Source Code (repository root)
 

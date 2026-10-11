@@ -13,7 +13,7 @@
 | ImplementationStatus | implemented/not-implemented/deferred與reason；與sourceKind獨立。unimplemented不生成success路線 |
 | MissingField | path、reason=not-provided/invalid/unsupported、不可信原值不入畫面；便於具體顯示缺站名／時間／幾何 |
 
-live只用於該次實際供應商請求的結果（成功或失敗）；改來源模式必須重新建請求。歷史live結果重新開啟展示為static/historical-replay，originalQueriedAt保留，不改成現在查询時間。回放无合法完整数据時僅顯示歷史文字證據；根據文字構造可執行payload標simulated。
+live只用於該次實際供應商請求的結果（成功或失敗）；所選sourceMode不代表已調用或已取得結果。請求前失敗的provenance為null，畫面顯示「所選來源：真實查詢｜尚未調用」與實際原因，不顯示「真實當次查詢結果」或虛構查詢時點。改來源模式必須重新建請求。歷史live結果重新開啟展示為static/historical-replay，originalQueriedAt保留，不改成現在查询時間。回放无合法完整数据時僅顯示歷史文字證據；根據文字構造可執行payload標simulated。
 
 資料日期用來源原精度（日期或日期時間）並記精度／時區；查閱時間為ISO時間，畫面以Asia/Hong_Kong顯示。publishedAt不是updatedAt，observedAt不是來源更新或效力證明。不輸出Key、完整敏感請求URL、token或私人起點。
 
@@ -24,10 +24,13 @@ live只用於該次實際供應商請求的結果（成功或失敗）；改來�
 | RouteSelection | origin、destination、mode、wheelchair、sourceMode=live/replay/simulation、sampleId:null或已審閱資料ID、selectionVersion、accessibilityVersion；selectionVersion管理路線選擇，accessibilityVersion管理輪椅需求及證據評估 |
 | RequestContext | requestId、selectionVersion、不可變selection snapshot、identityGeneration、elderGeneration、viewGeneration、screen、viewRole、elderId、demoMode、map generation／instance。token僅沿用內部identity snapshot作匹配，不加入可序列化payload、回放或日誌 |
 | RouteQuery | selection snapshot、requestId；啟動前驗證全部输入；定位／候選解析開始前已取得requestId |
-| RouteQueryOutcome | success{plans:非空RoutePlan[], provenance, warnings[]}／no-route{provenance}／error{category,message,provenance}／not-implemented{reason,mode,sourceMode} |
+| RequestAttempt | status=not-sent/sent、sentAt:null或ISO時間；僅路線transport實際啟動發送時為sent，不代表供應商已收到或成功。驗證、定位、候選解析及免費／配置門禁不算路線請求；replay/simulation亦為not-sent |
+| RouteQueryOutcome | 共用requestedSourceMode=live/replay/simulation、requestAttempt；success{plans:非空RoutePlan[], provenance, warnings[]}／no-route{provenance}／error{category,message,provenance:Provenance或null}／not-implemented{reason,mode,sourceMode,provenance:null}；success/no-route必須有對應結果來源 |
 | ErrorCategory | invalid-input/config/position-denied/position-timeout/position-unavailable/transport/timeout/provider/permission/quota/invalid-response/unknown；只有實際可靠訊號才分類permission/quota，不從任意文本猜 |
 
 有可用方案但部分字段缺失是success＋缺口，不當無路線。供應商成功狀態且方案集合合法、明確空才no-route；route缺失、方案集合類型畸形／全數無法解析屬invalid-response。異常、provider失敗不得no-route，不導向simulated。單個畸形方案可隔離並列warning；其餘可用方案保持順序，原索引保留。
+
+請求前無Key、輸入無效、定位拒絕或免費條件未確認：error保留requestedSourceMode，requestAttempt={status:not-sent,sentAt:null}且provenance=null。實際live路線請求已發送後的網路／超時／provider／格式失敗：requestAttempt為sent並有實際發送時點，provenance為live，僅證明調用嘗試而非取得有效路線。回放／模擬只有取得該來源的資料或處理結果時才帶相應provenance；讀取前失敗為null。not-implemented固定not-sent及null來源。任何分支均不自動修改requestedSourceMode或退為模擬。
 
 路線請求匹配key含起終點、mode、sourceMode及身份／視圖generation，不含僅影響提示的wheelchair。需求開關只遞增accessibilityVersion；路線返回按目前需求版本評估，提示返回則同時核route plan與accessibilityVersion。完整方案／備選改動更新selectionVersion與accessibilityVersion，但不重發同一已完成供應商查詢。
 
