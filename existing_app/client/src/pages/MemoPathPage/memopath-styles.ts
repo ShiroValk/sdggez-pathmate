@@ -1,4 +1,20 @@
 export const MEMOPATH_CSS = `
+.memopath-stage .route-preview-page{padding:18px 16px 40px;overflow-y:auto}
+.memopath-stage .route-preview-entry{display:block;width:100%;padding:12px;margin:8px 0;background:var(--gold);border-radius:12px;font-weight:700}
+.memopath-stage .route-preview{background:var(--cream);padding:12px;color:var(--ink);font-size:16px;overflow-wrap:anywhere}
+.memopath-stage .route-preview h2{font-size:21px}.memopath-stage .route-preview h3{font-size:18px}
+.memopath-stage .route-controls{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0}
+.memopath-stage .route-preview label{display:block;font-weight:600;margin:6px 0}
+.memopath-stage .route-preview input:not([type=checkbox]),.memopath-stage .route-preview select{display:block;width:100%;min-height:44px;border:1px solid var(--line);border-radius:8px;background:white;padding:8px;margin-top:4px;font-size:16px}
+.memopath-stage .route-preview button{min-height:44px;background:var(--gold);border:1px solid var(--line);padding:8px;border-radius:8px}
+.memopath-stage .route-preview :is(button,input,select,a,summary):focus-visible{outline:3px solid #365d92;outline-offset:3px}
+.memopath-stage .route-preview [data-route-status]{background:white;border-left:5px solid var(--blue);padding:12px;margin:10px 0}
+.memopath-stage .route-preview article{border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0;background:white}
+.memopath-stage .route-preview .route-source{font-weight:700;border-bottom:2px solid var(--line);padding-bottom:8px}
+.memopath-stage .route-preview svg{width:100%;height:150px;background:#f4f4ee;border:1px solid var(--line)}
+.memopath-stage .route-preview ol,.memopath-stage .route-preview ul{padding-left:22px}.memopath-stage .route-preview li{margin:8px 0}
+.memopath-stage .route-preview a{color:#255a8a;text-decoration:underline}
+.memopath-stage .amp-route-info.route-preview{position:relative;inset:auto;max-height:65vh;overflow-y:auto;margin:8px;z-index:4;font-size:16px}
 .memopath-stage{--cream:#fbf3e7;--paper:#fff;--ink:#2c2119;--muted:#a79f96;--line:#b5aa9d;--green:#86a94e;--green-dark:#617f2f;--blue:#568dbb;--gold:#f2d392;--soft:#f4ead9;--red:#c45545;--shadow:0 3px 5px #0003;--radius:18px}
 .memopath-stage *,.memopath-stage *::before,.memopath-stage *::after{box-sizing:border-box}
 .memopath-stage{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"PingFang HK","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;color:var(--ink)}

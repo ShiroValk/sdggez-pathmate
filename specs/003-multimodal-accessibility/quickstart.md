@@ -1,6 +1,6 @@
 # Quickstart: 003實作後演示與驗證
 
-日期2026-10-11。本文件為運行計劃；003新測試／頁面尚未實作，以下擬新增命令與情境不可當已通過。完整对照见[verification.md](verification.md)，模型與畫面规则见[data-model](data-model.md)及[契約](contracts/route-preview.md)。
+日期2026-10-11。003 頁面與三個純測試已實作；本次通過及受阻範圍分開記錄，真實高德／香港公共入口未驗。完整对照见[verification.md](verification.md)，模型與畫面规则见[data-model](data-model.md)及[契約](contracts/route-preview.md)。
 
 ## 前提與啟動
 
@@ -33,7 +33,7 @@ npm.cmd run dev
 
 ## 相稱命令
 
-擬新增3个纯测试檔後才运行（直接命令，不加入现有9套件dispatcher）：
+3個純測試檔已存在，可直接運行（直接命令，不加入现有9套件dispatcher）：
 
 ```powershell
 node --import tsx --test tests/integration/route-model.test.ts tests/integration/route-state.test.ts tests/integration/route-accessibility.test.ts
@@ -72,3 +72,17 @@ npm.cmd run test:integration -- --suite demo
 V01/V02/V05/V06/V07受控数据仅证明相應逻辑；live覆盖、静态资料查閱、历史证据、模拟显示各有自己的证据ID。验证后停止本次夹具、清本次合成账号及临时资源，保留用户3000／开发DB。复用既有清理策略但不运行未审查的全库删除。
 
 更新verification的31行，未执行保持not-run，阻塞有原因與可继续范围，暂緩记reason／impact；SC未达保留。核git diff／链接后按阶段提交，不部署、不推送。交付全程真实样本数0是允许结果，不要求长期维护安排。
+
+## 目前可操作演示
+
+長者首頁 →「出行方式與無障礙提示」；初始為真實查詢但不自動定位／查路線。門禁尚未放行時，手動規劃顯示尚未調用及核查原因，不產生模擬成功。選「顯式模擬」才載入原創附近示意坐標（非核驗入口），逐選步行／駕車／公交；公交可切同段備選，輪椅開關不重查。模擬情境可選局部、不足、日期未知、過期、衝突、障礙、職員協助、完整分支、無路線或錯誤。完整分支仍標模擬，不計真實confirmed。三項設施為static官方連結、內容未載入、日期未知，不支持当前路段。選歷史回放顯示未完成，無合法payload不造回放。
+
+圖為所供幾何的分段SVG示意、無底圖，不證明可達。公共點可手填名稱與坐標／明選搜尋候選（搜尋同樣受真實門禁）；主入口無GPS前置。原行程目的地文字保留，沒有明確坐標時要求選點；返家保留步行並要求明選入口，不猜第一地理結果。真實香港D01–D04與其他既有地圖入口仍須後續本機驗證。
+
+受控UI命令（已裝Chrome／Edge，使用現有esbuild，CSP＋腳本攔截禁外部流量）：
+
+```powershell
+node --import tsx tests/integration/route-ui.validation.ts
+```
+
+產出本feature evidence/browser-validation.json及browser-simulation.png；獨立临時profile／bundle／loopback服務在finally清理，無帳號夾具。Windows沙箱若不允許啟動Chrome或SWC路徑讀取，應對原命令請求執行權限，不改檢查以假稱通過。DB契約回歸本次受阻，待原本_test服務可用後逐套執行上述命令；不把受控返回或preview當真實後端證據。

@@ -25,6 +25,7 @@ import {
   createMap,
   createPositionMarker,
   createRoutePolyline,
+  createRouteFragments,
   disposeMaps,
   formatDistance,
   formatDuration,
@@ -34,11 +35,16 @@ import {
   loadAMap,
   isMapConfigured,
   planRoute,
+  queryRoute,
+  searchPublicRouteTips,
   resolveHomePosition,
   searchTips,
   zoomForRadius,
 } from './memopath-amap';
 import type { AMapInstance, AMapOverlay, AMapPoint, AmpRoute, AmpTip } from './memopath-amap';
+import { mountRoutePreview } from './route-preview';
+import { point as validRoutePoint } from './route-model';
+import type { RouteMode, Endpoint } from './route-model';
 
 interface MemoTripForm {
   destination: string;
@@ -383,6 +389,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   let elderGeneration = 0;
   let viewGeneration = 0;
   let routeSequence = 0;
+  let routePreview: ReturnType<typeof mountRoutePreview> | null = null;
+  let routePreviewRoot: HTMLElement | null = null;
   const suggestionSequences = { home: 0, map: 0, destination: 0 };
   let settingSaveVersion = 0;
   let settingSaveQueue: Promise<void> = Promise.resolve();
@@ -460,6 +468,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function render(): void {
+    routePreview?.dispose(); routePreview = null; routePreviewRoot = null; routeSequence += 1;
+    clearRouteOverlays(null);
     const view = views[state.screen] ?? views.login;
     app.innerHTML = view();
     if (!state.demoMode && authenticatedRole === 'elder') {
@@ -490,6 +500,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   /** Remove all previous identity data and drafts; pending revocation is held
    * separately in API module memory for an explicit retry, never localStorage. */
   function clearIdentityData(): void {
+    routePreview?.dispose(); routePreview = null; routePreviewRoot = null; routeSequence += 1;
     identityGeneration += 1;
     authenticatedRole = null;
     authenticatedIsDemo = false;
@@ -572,6 +583,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function nav(screen: string): void {
+    routePreview?.clear(); routeSequence += 1;
     viewGeneration += 1;
     const authScreens = ['login', 'register1', 'register2', 'register3'];
     if (state.screen !== screen && (authScreens.includes(state.screen) || authScreens.includes(screen))) {
@@ -584,6 +596,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function back(): void {
+    routePreview?.clear(); routeSequence += 1;
     viewGeneration += 1;
     authAttemptSequence += 1;
     state.screen = state.history.pop() ?? 'login';
@@ -602,7 +615,10 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function setCurrentElder(id: string): void {
-    if (state.currentElderId !== id) elderGeneration += 1;
+    if (state.currentElderId !== id) {
+      routePreview?.dispose(); routePreview=null; routePreviewRoot=null; routeSequence+=1;
+      elderGeneration += 1;
+    }
     state.currentElderId = id;
     localStorage.setItem(ELDER_KEY, id);
   }
@@ -950,7 +966,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     if (!state.demoMode && authenticatedRole === 'elder' && !state.dashboard?.elder) return '<section class="screen"><h1>等待照護關聯</h1><p>你已登入自己的長者帳號。目前未關聯照護資料；同名或電話不會自動授權。</p><button class="primary" data-go="care">查看並接受照護邀請</button><button data-go="settings">我的設定</button><button data-action="logout">登出</button></section>';
 
     const elderName: string = state.dashboard?.elder?.name ?? state.dashboard?.elder?.nickname ?? '王伯伯';
-    return `<section class="screen"><div class="top-brand"><div class="left">${logo}<span>${t('brandName')}<br>MemoPath</span></div><span class="top-actions"><button class="settings-btn" data-go="elderSettings" aria-label="${t('settingsCenter')}">⚙️</button><button class="sos" data-action="sos">🚨報警求助<br>SOS<small>長按3秒撥打999</small></button></span></div><h1 class="greeting">${t('greeting')}，${esc(elderName)} 👋</h1><div class="home-date">${todayLabel()}</div><button class="weather-card" data-go="weather"><span class="weather-icon">🌤️</span><span><strong>${t('todayWeather')}</strong><small>曼谷 31° 酷熱注意</small></span><span class="detail-btn">${t('weatherDetail')}</span></button>${mapMarkup(false, 'home')}${placeChipsHtml()}<div class="quick-grid"><button class="quick" data-go="payment">${t('payCode')}<span class="glyph">▦</span></button><button class="quick" data-go="taxi">${t('quickTaxi')}<span class="glyph">🚕</span></button><button class="quick" data-go="contacts">${t('contactFamily')}<span class="glyph">☎</span></button></div><div class="voice"><span class="mic">🎙</span><span>${t('voiceHint')}</span><button class="press" data-action="voiceToggle">${t('pressLabel')}</button></div></section>`;
+    return `<section class="screen"><div class="top-brand"><div class="left">${logo}<span>${t('brandName')}<br>MemoPath</span></div><span class="top-actions"><button class="settings-btn" data-go="elderSettings" aria-label="${t('settingsCenter')}">⚙️</button><button class="sos" data-action="sos">🚨報警求助<br>SOS<small>長按3秒撥打999</small></button></span></div><h1 class="greeting">${t('greeting')}，${esc(elderName)} 👋</h1><div class="home-date">${todayLabel()}</div><button class="weather-card" data-go="weather"><span class="weather-icon">🌤️</span><span><strong>${t('todayWeather')}</strong><small>曼谷 31° 酷熱注意</small></span><span class="detail-btn">${t('weatherDetail')}</span></button>${mapMarkup(false, 'home')}<button class="route-preview-entry" data-go="tripMap">${state.setting.language === 'english' ? 'Travel modes and accessibility' : state.setting.language === 'mandarin' ? '出行方式与无障碍提示' : '出行方式與無障礙提示'}</button>${placeChipsHtml()}<div class="quick-grid"><button class="quick" data-go="payment">${t('payCode')}<span class="glyph">▦</span></button><button class="quick" data-go="taxi">${t('quickTaxi')}<span class="glyph">🚕</span></button><button class="quick" data-go="contacts">${t('contactFamily')}<span class="glyph">☎</span></button></div><div class="voice"><span class="mic">🎙</span><span>${t('voiceHint')}</span><button class="press" data-action="voiceToggle">${t('pressLabel')}</button></div></section>`;
   }
 
   function weather(): string {
@@ -962,7 +978,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   function tripMap(): string {
-    return `<section class="screen map-page no-scroll"><div class="map-top-bar"><button class="big-back-top" data-back aria-label="返回">←</button><h1>${t('mapTitle')} · ${esc(state.navDestination)}</h1></div>${mapMarkup(true, 'large')}<div class="amp-route-info" id="ampRouteInfo" hidden></div><button class="route-home" data-action="tripNavRetry">🔄 重新規劃路線</button></section>`;
+    return `<section class="screen map-page route-preview-page"><div class="map-top-bar"><button class="big-back-top" data-back aria-label="返回">←</button><h1>${t('mapTitle')} · ${esc(state.navDestination)}</h1></div><p class="route-route-limit">${t('mapPlaceholder')}</p><div id="ampRouteInfo" data-route-host></div></section>`;
   }
 
   function cabArrived(): string {
@@ -1815,6 +1831,9 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     container: HTMLElement,
     kind: 'home' | 'family' | 'large' | 'safety',
   ): Promise<void> {
+    if (kind === 'large') {
+      routePreview?.dispose(); routePreview=null; routePreviewRoot=null; routeSequence+=1;
+    }
     const context = captureIdentityContext();
     const current = (): boolean => isIdentityContextCurrent(context) && container.isConnected;
     container.innerHTML = `<div class="map-loading">🗺️ ${t('mapLoadingText')}</div>`;
@@ -1863,24 +1882,18 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function autoPlanTrip(forceFreshPosition = false): Promise<void> {
-    const context = captureIdentityContext();
-    const destination = state.navDestination;
-    let destPos: AMapPoint | null = state.navPos;
-    if (!destPos) {
-      destPos = await geocodeAddress(destination);
-    }
-    if (!isIdentityContextCurrent(context) || destination !== state.navDestination) return;
-    if (!destPos) {
-      showRouteInfo('無法解析此目的地。請在地圖上方搜尋，並選擇帶有效座標的高德地點後再規劃。');
-      toast('目的地未解析，請在上方搜尋框選擇真實地點');
-      return;
-    }
-    state.navPos = destPos;
-    await planAndDraw(destPos, destination, 'driving', forceFreshPosition);
+    const preview = ensureRoutePreview();
+    if (!preview) return;
+    preview.clear();
+    const pos = validRoutePoint(state.navPos);
+    if (!pos) { preview.setDestinationDraft(state.navDestination, 'driving'); return; }
+    preview.setDestination({id:`destination:${state.navDestination}`,label:state.navDestination,point:pos,selectionOrigin:'public-search'},'driving');
+    if (forceFreshPosition) await preview.run(true);
   }
 
   async function mountScreenMaps(): Promise<void> {
     const screen: string = state.screen;
+    if (screen === 'tripMap') { ensureRoutePreview(); if (state.navDestination) await autoPlanTrip(); return; }
     let kind: 'home' | 'family' | 'large' | 'safety' | null = null;
     if (screen === 'elderHome') kind = 'home';
     else if (screen === 'familyHome') kind = 'family';
@@ -1965,54 +1978,48 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     box.hidden = false;
   }
 
-  function clearRouteOverlays(map: AMapInstance): void {
+  function clearRouteOverlays(map: AMapInstance | null): void {
     for (const overlay of routeOverlays) overlay.setMap(null);
     routeOverlays = [];
   }
 
-  async function planAndDraw(dest: AMapPoint, label: string, mode: 'walking' | 'driving', forceFreshPosition = false): Promise<void> {
-    const context = captureIdentityContext();
-    const sequence = ++routeSequence;
-    const container: Element | null = app.querySelector('[data-map="large"]');
-    if (!(container instanceof HTMLElement)) return;
-    const map: AMapInstance | null = getMapFor(container);
-    if (!map) {
-      toast('地圖未準備好，請稍後再試');
-      return;
-    }
-    const pos: AMapPoint = await getCurrentPosition({ forceFresh: forceFreshPosition });
-    if (!isIdentityContextCurrent(context) || sequence !== routeSequence || !container.isConnected || getMapFor(container) !== map) return;
-    const route: AmpRoute | null = await planRoute(mode, pos, dest);
-    if (!isIdentityContextCurrent(context) || sequence !== routeSequence || !container.isConnected || getMapFor(container) !== map) return;
-    if (!route) {
-      toast('暫時規劃唔到路線，請稍後再試');
-      return;
-    }
-    clearRouteOverlays(map);
-    const line: AMapOverlay | null = createRoutePolyline(
-      route.points,
-      mode === 'walking' ? '#5f8d4e' : '#4a6fa5',
-    );
-    const marker: AMapOverlay | null = createDestMarker(dest);
-    const added: AMapOverlay[] = [];
-    if (line) added.push(line);
-    if (marker) added.push(marker);
-    if (added.length > 0) map.add(added);
-    routeOverlays = added;
-    map.setFitView(added, false, [70, 70, 90, 70]);
-    showRouteInfo(
-      `${mode === 'walking' ? '🚶' : '🚗'} ${label} · ${formatDistance(route.distanceM)} · 約${formatDuration(route.durationS)}`,
-    );
+  /** Shared new route UI for trip/search/home. Captured identity remains internal;
+   * no token is passed to the provider model or browser evidence. */
+  function ensureRoutePreview(): ReturnType<typeof mountRoutePreview> | null {
+    const root=app.querySelector<HTMLElement>('#ampRouteInfo'); if(!root)return null;
+    if(routePreview&&routePreviewRoot===root)return routePreview;
+    routePreview?.dispose(); routePreviewRoot=root;
+    const identity=captureIdentityContext();const container=app.querySelector<HTMLElement>('[data-map="large"]');const map=container?getMapFor(container):null;
+    routePreview=mountRoutePreview(root,{
+      language:state.setting.language,
+      query:queryRoute,
+      search:searchPublicRouteTips,
+      locate:()=>getCurrentPosition({forceFresh:true}),
+      current:()=>isIdentityContextCurrent(identity)&&(!container||(container.isConnected&&getMapFor(container)===map)),
+      context:()=>({identityGeneration,elderGeneration,viewGeneration,mapGeneration:routeSequence,screen:state.screen,viewRole:state.role,elderId:state.currentElderId,demoMode:state.demoMode}),
+      draw:p=>{clearRouteOverlays(map);if(!p||!map)return;const lines=createRouteFragments(p.geometry.fragments,p.mode==='walking'?'#5f8d4e':'#4a6fa5');const marker=createDestMarker(p.destination.point);const added=marker?[...lines,marker]:lines;if(added.length)map.add(added);routeOverlays=added;if(added.length)map.setFitView(added,false,[70,70,90,70]);},
+    });
+    return routePreview;
+  }
+
+  /** Selection invalidates synchronously, then optional fresh device origin is
+   * resolved under the preview context; public inputs remain available on failure. */
+  async function planAndDraw(dest: AMapPoint, label: string, mode: RouteMode, forceFreshPosition = false): Promise<void> {
+    const preview=ensureRoutePreview();if(!preview)return;
+    preview.clear();const point=validRoutePoint(dest);if(!point){preview.setDestinationDraft(label,mode);return;}
+    preview.setDestination({id:`destination:${label}`,label,point,selectionOrigin:'public-search'},mode);
+    await preview.run(true);
   }
 
   async function pickMapTip(index: number): Promise<void> {
+    ensureRoutePreview()?.clear();
     const context = captureIdentityContext();
     const tip: AmpTip | undefined = state.mapTips[index];
     if (!tip) return;
     const panel: HTMLElement | null = app.querySelector('[data-mapsuggest]');
     if (panel) panel.hidden = true;
     toast(`正在規劃去「${tip.name}」嘅路線…`);
-    const dest: AMapPoint | null = tip.location ?? (await geocodeAddress(`${tip.district}${tip.name}`));
+    const dest: AMapPoint | null = validRoutePoint(tip.location);
     if (!isIdentityContextCurrent(context)) return;
     if (!dest) {
       toast('搵唔到該地點嘅位置');
@@ -2022,22 +2029,19 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   async function goRouteHome(): Promise<void> {
+    const sequence=++routeSequence;ensureRoutePreview()?.clear();
     const context = captureIdentityContext();
     const geofence: MemoPathGeofenceRecord | null = await ensureGeofence();
-    if (!isIdentityContextCurrent(context)) return;
+    if (!isIdentityContextCurrent(context) || sequence!==routeSequence) return;
     const homeLabel: string = geofence ? cleanHomeLabel(geofence.homeLabel) : '';
     if (homeLabel.length === 0) {
       toast('請先喺「設定安全範圍」填寫屋企地址');
       return;
     }
     toast('正在規劃返屋企嘅路線…');
-    const homePos: AMapPoint | null = await resolveHomePosition(homeLabel);
-    if (!isIdentityContextCurrent(context)) return;
-    if (!homePos) {
-      toast('搵唔到屋企地址嘅位置');
-      return;
-    }
-    await planAndDraw(homePos, '返屋企', 'walking');
+    // A saved text label does not uniquely identify an entrance. The supported
+    // geofence API stays unchanged; ask for an explicit point in the shared UI.
+    ensureRoutePreview()?.setDestinationDraft(homeLabel,'walking');
   }
 
   function pickDestTip(index: number): void {
@@ -2846,6 +2850,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   }
 
   return () => {
+    routePreview?.dispose(); routePreview=null;routePreviewRoot=null;routeSequence+=1;
     active = false; identityGeneration += 1;
     app.removeEventListener('click', onClick);
     app.removeEventListener('input', onInput);

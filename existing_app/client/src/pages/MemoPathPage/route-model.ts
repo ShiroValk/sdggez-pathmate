@@ -107,7 +107,7 @@ export function point(value: unknown): RoutePoint | null {
 /** Validate public/local inputs before query construction; rejects unknown enum values. */
 export function validQuery(value: unknown): value is RouteQuery {
   const q = record(value);
-  const endpoint = (v: unknown): boolean => { const e = record(v); return !!textField(e.id, 200) && !!textField(e.label, 200) && !!point(e.point) && ['public-search', 'device', 'explicit-public-sample'].includes(String(e.selectionOrigin)); };
+  const endpoint = (v: unknown): boolean => { const e = record(v); return !!textField(e.id, 200) && !!textField(e.label, 200) && !!point(e.point) && typeof e.selectionOrigin==='string' && ['public-search', 'device', 'explicit-public-sample'].includes(e.selectionOrigin); };
   return endpoint(q.origin) && endpoint(q.destination) && typeof q.mode === 'string' && ['walking', 'driving', 'transit'].includes(q.mode) && typeof q.sourceMode === 'string' && ['live', 'replay', 'simulation'].includes(q.sourceMode) && Number.isSafeInteger(q.requestId) && Number(q.requestId) > 0 && (q.sampleId === null || !!textField(q.sampleId, 200));
 }
 /** Validate source independently of route mode/demo identity. */
@@ -183,7 +183,11 @@ function transitLegs(raw:unknown,id:string,gaps:MissingField[],unsupported:strin
  * No network, inferred routing, identity or HTML rendering here. */
 export function normalizeRoute(raw:unknown,query:RouteQuery,provenance:Provenance,sentAt:string|null=null):RouteQueryOutcome{
  if(!validQuery(query)||!validProvenance(provenance))return routeError(query,'invalid-input','Invalid route query/source');
- const json=record(raw);if(json.status!=='1')return routeError(query,json.status==='0'?'provider':'invalid-response','Provider returned no valid success status',provenance,sentAt);
+ const json=record(raw);if(json.status!=='1'){
+  const code=typeof json.infocode==='string'?json.infocode:null;
+  const category:ErrorCategory=json.status!=='0'?'invalid-response':['10003','10004','10010'].includes(code??'')?'quota':['10005','10006','10007','10008','10009'].includes(code??'')?'permission':code==='10001'?'config':'provider';
+  return routeError(query,category,category==='quota'?'供應商額度或頻率限制，未取得路線':category==='permission'?'供應商來源／平台／驗證限制，未取得路線':category==='config'?'供應商配置無效或已過期':'供應商未返回有效成功狀態',provenance,sentAt);
+ }
  const route=record(json.route),collection=query.mode==='transit'?route.transits:route.paths;
  if(!Array.isArray(collection))return routeError(query,'invalid-response','Route collection not provided or malformed',provenance,sentAt);
  const base={requestedSourceMode:query.sourceMode,requestAttempt:{status:sentAt===null?'not-sent' as const:'sent' as const,sentAt}};

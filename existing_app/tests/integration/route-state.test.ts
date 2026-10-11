@@ -40,3 +40,9 @@ test('preflight failure has no invented source/time and preserves requested sour
   for(const category of ['config','invalid-input','position-denied','quota'] as const){const o=routeError(q,category,'Controlled'); assert.equal(o.provenance,null);assert.deepEqual(o.requestAttempt,{status:'not-sent',sentAt:null});assert.equal(o.requestedSourceMode,'live');}
   invalidateRoute(s,true); assert.equal(s.selection,null); assert.equal(s.plans.length,0);
 });
+test('current request never accepts mismatched source or endpoints',()=>{
+ const {s,c}=setup();const outcome={status:'success' as const,plans:plans(c.requestId),provenance,warnings:[],requestedSourceMode:'simulation' as const,requestAttempt:{status:'not-sent' as const,sentAt:null}};
+ assert.equal(acceptRoute(s,c,{...outcome,provenance:{...provenance,kind:'live'}}),false);
+ const foreign=structuredClone(outcome);foreign.plans[0].destination.point.lng=9;assert.equal(acceptRoute(s,c,foreign),false);
+ assert.equal(acceptRoute(s,c,outcome),true);
+});

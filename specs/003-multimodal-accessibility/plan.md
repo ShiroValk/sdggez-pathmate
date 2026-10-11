@@ -4,7 +4,7 @@
 
 **Input**: `specs/003-multimodal-accessibility/spec.md`，以及本次用戶列明的七項規劃要求。
 
-**Status**: Phase 0研究及Phase 1設計完成；尚未實作或取得003運行驗收。規劃基線 `7d34242`；Git分支與`.specify/feature.json`均指向003，環境變量無覆寫。setup-plan輸出中的BRANCH為目錄標記`003-multimodal-accessibility`，實際Git分支以以上全名為準。
+**Status**: 設計與受控範圍實作完成；純模型、UI、lint/build證據見verification，真實調用／DB／合法資料回放保留暫緩。規劃基線 `7d34242`；Git分支與`.specify/feature.json`均指向003，環境變量無覆寫。setup-plan輸出中的BRANCH為目錄標記`003-multimodal-accessibility`，實際Git分支以以上全名為準。
 
 ## Summary
 
@@ -67,7 +67,7 @@ specs/003-multimodal-accessibility/
 └── checklists/requirements.md
 ```
 
-`tasks.md`已由speckit-tasks產生，53項任務尚未執行。verification現為驗證設計及交付範圍表，非完成證據。
+`tasks.md`已由speckit-tasks產生，53項按實際完成勾選，含受阻未勾項。verification已列本次運行證據及31行交付範圍，部分驗收仍未達。
 
 ### Source Code (repository root)
 
@@ -77,9 +77,10 @@ existing_app/
 │   ├── memopath-amap.ts            # 既有transport、搜索、地圖；增queryRoute
 │   ├── memopath-engine.ts          # 既有三導航入口；增方式／公共起點／提示UI
 │   ├── position-cache.ts           # 保留既有定位政策
-│   ├── route-model.ts             # 擬新增共同型別、正規化／输入驗證
+│   ├── route-model.ts             # 新增共同型別、正規化／输入驗證
 │   ├── route-state.ts             # 擬新增純狀態／請求匹配策略
 │   ├── route-accessibility.ts     # 擬新增局部證據與保守結論
+│   ├── route-preview.ts           # engine所擁有的DOM控件與生命周期，無新服務
 │   └── route-preview-data.ts      # 擬新增已審閱靜態／回放及顯式模擬
 ├── tests/integration/
 │   ├── route-model.test.ts        # 擬新增，不需DB

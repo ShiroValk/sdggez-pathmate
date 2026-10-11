@@ -1,7 +1,7 @@
 /** Pure route/assessment epochs. The engine supplies serializable context; token and
  * actual map-instance matching stay there. No provider, DOM, identity or persistence side effects. */
 import type { RequestContext, RouteQueryOutcome, RouteSelection, RoutePlan } from './route-model';
-import { validQuery } from './route-model';
+import { validQuery,validAttempt,validProvenance } from './route-model';
 export type QueryPhase = 'idle' | 'resolving' | 'loading' | 'success' | 'no-route' | 'error' | 'not-implemented';
 export interface RouteState { requestId: number; phase: QueryPhase; selection: RouteSelection | null; context: RequestContext | null; outcome: RouteQueryOutcome | null; plans: RoutePlan[]; selectionVersion: number; accessibilityVersion: number }
 export interface AssessmentContext { request: RequestContext; selectionVersion: number; accessibilityVersion: number; planId: string; options: Record<string,string> }
@@ -30,6 +30,11 @@ export function matchesRequest(state: RouteState, context: RequestContext): bool
 export function acceptRoute(state: RouteState, context: RequestContext, outcome: RouteQueryOutcome): boolean {
   if (!matchesRequest(state, context)) return false;
   if (outcome.requestedSourceMode !== context.query.sourceMode) return false;
+  if (!validAttempt(outcome.requestAttempt)) return false;
+  const source=context.query.sourceMode;
+  const matchesSource=(p:RoutePlan['provenance']):boolean=>validProvenance(p)&&(source==='live'?p.kind==='live':source==='simulation'?p.kind==='simulated':p.kind==='static'&&p.subtype==='historical-replay');
+  if (outcome.provenance!==null&&(!matchesSource(outcome.provenance)||(source==='live'&&outcome.requestAttempt.status!=='sent'))) return false;
+  if (outcome.status==='success'&&outcome.plans.some(p=>!matchesSource(p.provenance)||JSON.stringify(p.origin)!==JSON.stringify(context.query.origin)||JSON.stringify(p.destination)!==JSON.stringify(context.query.destination))) return false;
   if (outcome.status === 'success' && (!outcome.plans.length || outcome.plans.some(p => p.requestId !== context.requestId || p.mode !== context.query.mode))) return false;
   state.outcome = outcome; state.phase = outcome.status; state.plans = outcome.status === 'success' ? outcome.plans : [];
   if (state.selection) { state.selection.selectedPlanId = null; state.selection.selectedRideOptionIds = {}; }

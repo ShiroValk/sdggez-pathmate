@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-11（Asia/Hong_Kong）
 
-**Status**: Draft（規格品質檢查、規劃及任務分解已完成；尚未實作或取得003運行驗收）
+**Status**: Implemented with explicit limitations（純邏輯與受控UI已驗；真實高德、資料許可／回放與本機DB回歸暫緩，詳verification）
 
 **Input**: User description: "根據現在完成的部分，建立下一編號的新功能規格。實作多出行方式與無障礙提示。真實、靜態資料、模擬與未完成內容明確區分。不以實地核驗、全程已確認樣本或長期維護作為演示前置。"
 

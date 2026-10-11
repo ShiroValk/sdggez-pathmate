@@ -1,6 +1,6 @@
 # Verification Plan and Delivery Scope: 003
 
-日期2026-10-11，基線`7d34242`。本文件是驗證設計，不是測試已通過。003新路線功能尚未實作，verification=not-run；設計完整不改此狀態。復用既有基礎不稱未存在，但尚未取得003整合回歸證據。既有001／002证据单独引用，仅证明其时点范围。
+日期2026-10-11。003 已實作共同模型、來源門禁、三方式預覽、版本隔離與保守輪椅提示；驗證範圍如下。受控返回不是當次真實高德或實地證據，001／002仍只證明歷史時點。
 
 ## 檢查與運行證據編號
 
@@ -21,46 +21,46 @@
 
 ## FR逐项交付範圍表
 
-每行当前未实作／未运行。实现后补sourceKind、证据ID与链接、observed result、状态、reason／impact；暂緩标deferred，不能把design-ready填为passed。边界不适用时说明，而非无证据勾选。
+sourceKind：E01純邏輯合成；E02受控simulated＋static來源連結；E03本機構建；E04真實本機回歸嘗試／blocked；E05只讀邊界檢查。implemented表示代碼可用，不等同未執行情境passed。
 
 | 要求 | 设计位置／检查 | 实作后验收结果与证据边界 | 当前实现／验证 |
 | --- | --- | --- | --- |
-| FR-001 | C01，V03/V10 | 主入口三方式；三旧入口保留方式与正确状态 | 未實作／未运行 |
-| FR-002 | model Endpoint/context，V01/V03/V06 | 明確公共点，定位拒绝可继续；不猜同名或造坐标 | 未實作／未运行 |
-| FR-003 | model Plan/geometry，V01/V03 | 数值／文字／线与结果一致，缺项标未提供 | 未實作／未运行 |
-| FR-004 | model Legs，V02/V04 | 接驳／站點／备选／换乘正确，無换乘不造 | 未實作／未运行 |
-| FR-005 | model state，V05 | 查询前全部旧呈現失效，失败无旧结果 | 未實作／未运行 |
-| FR-006 | model context，V05 | 每await及catch上下文匹配，离页／身份／模式不回填 | 未實作／未运行 |
-| FR-007 | model outcome，V01/V06 | no-route与失败／未完成分辨，可改／重试 | 未實作／未运行 |
-| FR-008 | model需求，V07 | 一般轮椅开关仅评估，关开不改路线来源 | 未實作／未运行 |
-| FR-009 | model Conclusion，V07 | 三类可表达；真实无完整样本时无confirmed，障碍显式 | 未實作／未运行 |
-| FR-010 | model结论规则，V07 | 必要段缺口不confirmed；模拟完整仅测逻辑，真实样本可0 | 未實作／未运行 |
-| FR-011 | evidence matching，V07 | 具体支持与缺口可见，背景不冒充路段 | 未實作／未运行 |
-| FR-012 | evidence日期／来源，V07/V08 | source／原日期或未知／查阅日／条件齐全，静態非即時 | 未實作／未运行 |
-| FR-013 | dateAssessment，V07 | 日期未知／过期／冲突明确；无假TTL／维护承诺 | 未實作／未运行 |
-| FR-014 | assistance，V07 | 斜板需协助／确认条件；没有本次安排不称预约 | 未實作／未运行 |
-| FR-015 | Conclusion规则，V07 | 普通步行／最短／少换乘／驾车不自动confirmed | 未實作／未运行 |
-| FR-016 | provenance，V08 | 路线与每项设施独立标识、混合正确 | 未實作／未运行 |
-| FR-017 | sourceMode/outcome，V05/V06/V08 | 模拟持续标、真实失败不自动成功或变来源 | 未實作／未运行 |
-| FR-018 | D01–D04，V03/V04/V12 | 小范围香港故事与换乘参照，覆蓋限制明示 | 未實作／未运行 |
-| FR-019 | DeliveryScopeRow，V11/V12 | 每能力来源／证据／暂緩原因影响，真静模分开 | 未實作／未运行 |
-| FR-020 | plan范围，V12 | 全程真实样本0可交付限度，三项非前置 | 未實作／未运行 |
-| FR-021 | R06/C02，V09 | 免费／许可查证或停调用／打包，不付费或换服务 | 用户确认额度复用，具体核查待做／未运行 |
-| FR-022 | C03/章程，V05/V10 | 既有身份隔离／共享／位置／语音／手表边界保持 | 复用既有保护，003整合待做／未运行 |
-| FR-023 | C03/C04，V10/V11 | 公共API／职责保持，无DB；若需变更先方案确认 | 设计无公开边界变更，003回归待做／未运行 |
+| FR-001 | C01，V03/V10 | 主入口三方式；三旧入口保留方式与正确状态 | implemented；受控三方式 UI 通過 E02；三舊入口實際 live 回歸 deferred（E04），不能稱真實三方式通過 |
+| FR-002 | model Endpoint/context，V01/V03/V06 | 明確公共点，定位拒绝可继续；不猜同名或造坐标 | implemented；E01/E02 坐標0、缺值、同名明選及拒絕定位後輸入保留；真實香港公共入口查詢 deferred |
+| FR-003 | model Plan/geometry，V01/V03 | 数值／文字／线与结果一致，缺项标未提供 | implemented；E01/E02 共同摘要、步驟及不跨缺口幾何；圖為無底圖示意，真實值／JS地圖 deferred |
+| FR-004 | model Legs，V02/V04 | 接驳／站點／备选／换乘正确，無换乘不造 | implemented；E01/E02 合成2乘車段／1換乘，同段備選不加換乘；真實公交 deferred |
+| FR-005 | model state，V05 | 查询前全部旧呈現失效，失败无旧结果 | implemented；E01/E02 loading、錯誤、無路線撤銷舊呈現；無靜默成功 |
+| FR-006 | model context，V05 | 每await及catch上下文匹配，离页／身份／模式不回填 | implemented；E01/E02 request／身份／長者／view／map／role／demo／source 隔離；真實帳號切換 UI deferred（E04） |
+| FR-007 | model outcome，V01/V06 | no-route与失败／未完成分辨，可改／重试 | implemented；E01/E02 無路線、前置失敗、未完成、已發送受控錯誤分開，輸入保留／手動重試 |
+| FR-008 | model需求，V07 | 一般轮椅开关仅评估，关开不改路线来源 | implemented；E01/E02 輪椅開關只評估，不重查路線，loading返回可使用最新需求 |
+| FR-009 | model Conclusion，V07 | 三类可表达；真实无完整样本时无confirmed，障碍显式 | implemented；E01/E02 不足／局部／完整模擬分支及障礙；真實 confirmed=0 |
+| FR-010 | model结论规则，V07 | 必要段缺口不confirmed；模拟完整仅测逻辑，真实样本可0 | implemented；E01 必要段及兩端入口各自需要當次適用依據；E02 完整僅為 simulated |
+| FR-011 | evidence matching，V07 | 具体支持与缺口可见，背景不冒充路段 | implemented evaluator；E01 exact-leg／exact-facility／background 匹配；真實設施摘要 deferred（許可／適用範圍未明） |
+| FR-012 | evidence日期／来源，V07/V08 | source／原日期或未知／查阅日／条件齐全，静態非即時 | implemented；E02 各模擬資料及靜態來源連結顯示日期／未知／查閱日；無打包官方正文 |
+| FR-013 | dateAssessment，V07 | 日期未知／过期／冲突明确；无假TTL／维护承诺 | implemented；E01/E02 未知／過期／衝突保留缺口，查閱日不是來源有效期；無自訂TTL |
+| FR-014 | assistance，V07 | 斜板需协助／确认条件；没有本次安排不称预约 | implemented；E01/E02 協助可用性需依據，條件／未知／不可用不能confirmed，保持未預約 |
+| FR-015 | Conclusion规则，V07 | 普通步行／最短／少换乘／驾车不自动confirmed | implemented；E01/E02 路由模式與輪椅判定獨立，普通路線不自動升級 |
+| FR-016 | provenance，V08 | 路线与每项设施独立标识、混合正确 | implemented；E02 simulated路線／結論／依據與static連結分項標示；live＋真實static摘要 deferred |
+| FR-017 | sourceMode/outcome，V05/V06/V08 | 模拟持续标、真实失败不自动成功或变来源 | implemented；E02 顯式選模擬才生成；live門禁失敗仍live/not-sent，受控sent錯誤不轉成功 |
+| FR-018 | D01–D04，V03/V04/V12 | 小范围香港故事与换乘参照，覆蓋限制明示 | partial；D01–D04 公共點方案保留，E02 原創香港附近示意非核驗入口；真實公共點故事 deferred（E04） |
+| FR-019 | DeliveryScopeRow，V11/V12 | 每能力来源／证据／暂緩原因影响，真静模分开 | implemented；本31行逐項 source／證據／限制；E01–E05 實際運行與歷史分開 |
+| FR-020 | plan范围，V12 | 全程真实样本0可交付限度，三项非前置 | implemented；E02 全程真實確認0、實地0、維護0仍可演示受控提示；不降低真實confirmed門檻 |
+| FR-021 | R06/C02，V09 | 免费／许可查证或停调用／打包，不付费或换服务 | implemented gate＋deferred live；ROUTE_LIVE_REVIEW.allowed=false，使用者待確認；不新增付費／服務，靜態正文停打包 |
+| FR-022 | C03/章程，V05/V10 | 既有身份隔离／共享／位置／语音／手表边界保持 | partial verification；E02 API寫入0、E05無server/shared變更；E04 權限／auth／demo真實回歸受阻 |
+| FR-023 | C03/C04，V10/V11 | 公共API／职责保持，无DB；若需变更先方案确认 | implemented without contract/migration changes；E01/E02 舊型別／export與控制transport可用；E04 25API真實回歸尚未通過 |
 
 ## SC逐项验收範圍表
 
 | 条件 | 检查 | 計數／證據与通过口径 | 当前验证 |
 | --- | --- | --- | --- |
-| SC-001 | V03/V08 | >=1组3方式各有结果，逐方式真实／静態／模擬分别记录；未完成方式不达标，混合演示不叫真實三方式全通过 | 未运行 |
-| SC-002 | V02/V04 | >=1含换乘情境完整，误计备选为0；live／历史／模拟分列 | 未运行 |
-| SC-003 | V05 | 正反切換、前置解析／定位、快切、重试及各context场景，旧结果误标0 | 未运行 |
-| SC-004 | V01/V06 | 无路線／失败／缺坐标／定位拒绝4类反馈，伪造成功／缺值造数0 | 未运行 |
-| SC-005 | V07 | 6类边界完整，真实误confirmed0；模拟完整不增加真实样本数 | 未运行 |
-| SC-006 | V07/V08 | 展示条目来源齐全率100%，分母为所有路线方案／设施卡／场景／未完成入口；每资料日期或未知都有 | 未运行 |
-| SC-007 | V11/V12 | FR23行及SC8行各一，共31行无遗漏，暂緩有原因与影响；真实全程数单列0可接受 | 未运行 |
-| SC-008 | V12 | 1次完整故事，实地／全程确认／长期维护前置计数0；实际可用范围及未达项保留 | 未运行 |
+| SC-001 | V03/V08 | >=1组3方式各有结果，逐方式真实／静態／模擬分别记录；未完成方式不达标，混合演示不叫真實三方式全通过 | 未達／deferred；E02 原創合成三方式均可用，但不是明確香港公共入口結果；D01–D03 live=0，不以模擬補數 |
+| SC-002 | V02/V04 | >=1含换乘情境完整，误计备选为0；live／历史／模拟分列 | 受控範圍通過；E01/E02 2乘車段／1換乘、同段備選誤計0；當次live=0，歷史僅H01文字 |
+| SC-003 | V05 | 正反切換、前置解析／定位、快切、重试及各context场景，旧结果误标0 | partial verification；E01/E02 已驗快切／延遲／A→B→A及多context，誤回填0；真實帳號與舊入口完整UI待驗 |
+| SC-004 | V01/V06 | 无路線／失败／缺坐标／定位拒绝4类反馈，伪造成功／缺值造数0 | 受控範圍通過；E01/E02 無路線／失敗／缺坐標／拒絕定位皆反饋，缺值造數／偽成功0；不是自然供應商故障 |
+| SC-005 | V07 | 6类边界完整，真实误confirmed0；模拟完整不增加真实样本数 | 受控範圍通過；E01/E02 局部、不足、日期未知、過期、衝突、障礙／協助及完整模擬；真實誤confirmed0、真實樣本0 |
+| SC-006 | V07/V08 | 展示条目来源齐全率100%，分母为所有路线方案／设施卡／场景／未完成入口；每资料日期或未知都有 | partial verification；E02 當前展示 route/conclusion/evidence/static連結標示率100%（分母見JSON sourceLabels）；未取得live／合法replay及真實設施摘要，未宣稱全部情境通過 |
+| SC-007 | V11/V12 | FR23行及SC8行各一，共31行无遗漏，暂緩有原因与影响；真实全程数单列0可接受 | 通過交付表檢查；FR23＋SC8=31行，各有來源／證據／限制，暫緩不當passed；真實confirmed=0 |
+| SC-008 | V12 | 1次完整故事，实地／全程确认／长期维护前置计数0；实际可用范围及未达项保留 | partial；E02 一次受控窄屏／鍵盤完整故事通過，三非前置均0；D01／D02真實公共入口故事 deferred |
 
 ## 本轮计划证据与历史材料
 
@@ -70,14 +70,33 @@
 - H02：[002运行](../002-remove-platform-dependency/verification.md)，已記錄22项及lint、Edge手动路线与环境限制；不是本次重新运行，不消除003缺口。
 - H03：[001当前路线](../001-audit-backend-gaps/working/route-current-review.md)及[模拟缺陷检查](../001-audit-backend-gaps/evidence/inspection-validation.md)，支持修正需求，不当真实故障或003修复通过。
 
-**当前003运行通过数**：0。**真實全程已確認樣本**：0。**規劃文件完整度**與**实现／运行验收完成率**分开，下一阶段按V实际填证，不预先创建空截图或伪造运行结果。
+**本次運行**：E01新route測試19／19＋既有cache1／1；E02受控瀏覽器52／52；E03 lint/build退出碼0。E04四套業務回歸未通過，不能計入成功。**當次真實高德請求**：0；**真實全程確認樣本**：0。
 
 ## 實作基線與門禁（2026-10-11）
 
 - T001：開始commit `462080c`，分支及feature均003，開始時工作區乾淨；Node v24.19.0、npm 11.17.0，既有node_modules可用，3000／5173均無監聽。只核配置是否有地圖Key及独立本機_test庫，兩項均有；未輸出憑據、未改配置、未安裝／啟動服務或遷移。忽略規則已覆蓋依賴、產物、環境、Docker及ESLint，package為private、不需npm發佈ignore。
 - T002／V09：使用者先前確認免費額度；本輪仍缺帳號當次Web Service／JS類別、餘額／期限及付費超額設定證據。已請求脫敏資料，真實調用暫記blocked；不以有Key當免費核查通过。
 - T003：批准公開來源的有界查閱與許可結果見research；設施正文不打包，只連來源。完整歷史payload不可取得，真實回放暫緩；不構造假歷史。
-- T004：V01–V12統一記操作、日期、代碼／產物、來源、預期／實際、退出碼／截圖與限制。真實清單為D01或D02各三方式、必要時D03補、D04換乘，每項一次及最多一次有理由手動重試；門禁解除前請求數0。所有31項驗收仍未運行，純測試通過只填其範圍，不改live狀態。
+- T004：V01–V12統一記操作、日期、代碼／產物、來源、預期／實際、退出碼／截圖與限制。真實清單為D01或D02各三方式、必要時D03補、D04換乘，每項一次及最多一次有理由手動重試；門禁解除前請求數0。31項目前狀態見上表，純測試與受控UI不改live門禁。
 - 使用者本輪答覆：「先进行其他部分，这个我再确认后告知」。高德私有權益核查保持blocked，按授權繼續其他部分。
 - F01（V01/V05純邏輯）：新增route-model／route-state與route-state.test.ts；6項斷言全部通過，退出碼0；client type check退出碼0。涵蓋0值／缺值／enum、前置requestId、舊成功／錯誤、身份／視圖／地圖epoch、loading需求切換、A→B→A批次不變及舊評估拒絕、請求前null來源。未作UI或live驗收。
 - F02（V01/V02純解析）：route-model.test.ts＋state共11項通過，退出碼0；含幾何斷點、合法空方案／provider失敗／畸形集合、原方案與呈現分開、同段备选／換乘／未知段／不造ETA。`npm.cmd run lint`退出碼0（ESLint、Stylelint、server/client型別）；未執行外部服務或UI驗收。模型／狀態為可測試基礎，不據此改FR／SC整合狀態。
+
+## 本次整合證據（2026-10-11）
+
+- E01 / V01,V02,V05,V07：直接運行三個route純測試檔19項＋position-cache既有1項，共20／20，退出碼0。包括兩端入口分別核證，不把單端設施存在當另一端或街道證據。無DB／GPS／provider依賴。
+- E02 / V03–V08,V12：[瀏覽器日誌](evidence/browser-validation.json)、[當次截圖](evidence/browser-simulation.png)，52／52，退出碼0。原創合成三方式、公交首末接駁／換乘／同段備選、A→B→A路線請求增量0、需求toggle、六類提示邊界、遲到成功／失敗及多context、來源切換、未完成回放、live前置停用、定位等待期切換、原引擎入口／nav/back、鍵盤與390px範圍。JSONP使用假測試Key，腳本在加入DOM前攔截，驗output=JSON＋callback、舊searchTips／planRoute簽名與零值、成功／provider拒絕／abort／10秒超時界限後callback/script清理；測試中放行只是記憶體控制，不改產品門禁，也不是真實live證據。API寫入0、外部provider請求0、真實定位0。當前可見卡片來源分母／分子見JSON sourceLabels；不是未驗來源的100%。
+- E03 / V11：npm.cmd run lint退出碼0（ESLint、Stylelint、server/client型別）；npm.cmd run build退出碼0，SWC29檔、Vite1816模塊，當次client產物index-BCyy7zJV.js。首次SWC沙箱路徑解析EACCES，原命令提高執行權限重試通過，未改配置／繞過檢查。現有Vite模組配置及chunk大小警告仍在，非構建失敗。UI以同一源碼的esbuild受控bundle驗證，並非生產伺服器部署驗收。
+- E04 / V09,V10：使用者要求先做其他部分，真實高德門禁維持false。獨立_test配置存在，但只讀探測（無憑據輸出）為ECONNREFUSED。本次contracts與permissions各1斷言停在測試庫遷移前置，auth2項包含migration前置／測試伺服器ready逾時，demo1項連線拒絕；四套退出碼均1、業務驗收未通過。未啟動DB／重設schema／操作真實帳號，沒有新增遷移。不得將失敗解讀成已證明API相容或權限成功。
+- E05 / V10,V11：git diff server/shared為空；無新增依賴、公開HTTP契約、localStorage路線保存、DB表、週期位置寫入、語音錄音、共享繞過或手錶要求。端點／候選／結果在頁面記憶體，dispose與身份／长者切換清除DOM私有輸入。既有語音／安全／其他地圖服務未調職。無不相容契約或DB遷移，故無資料回滾操作；代碼回退使用Git revert本次feature checkpoint，不重設資料庫。
+
+## 暫緩與影響
+
+1. 高德私有權益核查T002：待使用者脫敏結果，才可記錄reviewedAt並放行ROUTE_LIVE_REVIEW；有Key或demoMode不放行。影響當次香港三方式、真實候選／JS地圖與自然錯誤驗證，不影響受控演示。
+2. 設施正文T034與完整歷史回放：未證明再利用許可／適用入口／來源有效期，歷史只有001文字而无原payload。僅提供3個官方靜態連結（日期未知＋查閱日），回放明示未完成；不復製官方內容或按摘要假造真實回放。
+3. 本機DB受阻T048：維持四套未通過；服務恢復後按quickstart逐套重跑，無需為本feature新增遷移。
+4. 舊三入口／四搜尋完整UI、真實帳號、合法live＋static摘要等未驗場景保留T022/T028/T038/T040/T044/T047未勾，已驗子項見E01/E02。不得把語義上的guard或靜態review當實際全場景通過。
+
+## 章程與交付審閱
+
+七原則核對：長者可讀原生控件／焦點與缺口（E02）；無障礙主張按證據限制（E01）；資料誠實分來源（E02）；隱私與照護授權沿既有邊界（E05，真實回歸E04受阻）；資源與免費使用門禁（E04）；責任與API保持（E05）；必要測試／可重現證據（E01–E04）。三基線維持受支持API、權限、服務邊界；沒有增代理或把前端模擬當後端保存。限制不需實地／全程已確認真實樣本／長期維護豁免，三项原本即非前置。
