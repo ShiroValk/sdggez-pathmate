@@ -16,6 +16,9 @@ import {routeError,normalizeRoute,metric} from './client/src/pages/MemoPathPage/
 import {queryRoute,searchTips,planRoute,formatDistance,formatDuration} from './client/src/pages/MemoPathPage/memopath-amap';
 import {mountMemoApp} from './client/src/pages/MemoPathPage/memopath-engine';
 import {MEMOPATH_CSS} from './client/src/pages/MemoPathPage/memopath-styles';
+// Exercise the preflight-denied branch explicitly, independent of the product's
+// current user-authorized policy. The isolated bundle has only a fake test key.
+ROUTE_LIVE_REVIEW.allowed=false;
 // Provider scripts never enter the document. The key is an original test literal.
 const nativeAppend=document.head.append.bind(document.head);let transportMode='success',lastScript=null,lastCallback=null,transportCalls=0;
 document.head.append=(...nodes)=>{for(const n of nodes){if(n instanceof HTMLScriptElement&&n.src.includes('amap.com')){if(n.src.includes('webapi.amap.com')){queueMicrotask(()=>n.onerror?.(new Event('error')));continue;}transportCalls++;lastScript=n;const url=new URL(n.src);lastCallback=url.searchParams.get('callback');if(url.searchParams.get('output')!=='JSON')throw new Error('Wrong output');if(transportMode==='success')queueMicrotask(()=>window[lastCallback]({status:'1',tips:[{name:'Controlled',location:'0,0'}],route:{paths:[{distance:'0',duration:'0',steps:[]}],transits:[]}}));if(transportMode==='provider-error')queueMicrotask(()=>window[lastCallback]({status:'0',info:'Controlled provider rejection',infocode:'10003'}));continue;}nativeAppend(n);}};

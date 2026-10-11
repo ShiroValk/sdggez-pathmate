@@ -2,9 +2,10 @@
  * historical payload, credentials, private location or persistence. */
 import {normalizeRoute} from './route-model';
 import type {RouteQuery,RouteQueryOutcome,Provenance,Evidence,RoutePresentation} from './route-model';
-/** Pending account review: changed only after a recorded, approved review. Never
- * infer free entitlement from a key or demo identity. Does not alter legacy exports. */
-export const ROUTE_LIVE_REVIEW={allowed:false,reason:'高德免費類別、餘額／期限及付費超額設定尚未核實',reviewedAt:null as string|null};
+/** User explicitly authorized the existing key on 2026-10-11; bounded current
+ * HTTP checks succeeded. This is authorization, not proof of account entitlement.
+ * No change to paid settings, provider, automatic retries or legacy exports. */
+export const ROUTE_LIVE_REVIEW={allowed:true,reason:'使用者明確指示使用現有Key；免費餘額／付費超額設定未獨立核驗',reviewedAt:'2026-10-11T11:42:05.175Z' as string|null};
 export const FACILITY_LINKS=[
  {id:'east-tst',title:'尖東站無障礙資料來源',url:'https://www.mtr.com.hk/en/customer/services/free_search.php?station=80'},
  {id:'science-museum',title:'香港科學館無障礙資料來源',url:'https://hk.science.museum/en/web/scm/visit/barrier-free-facilities.html'},

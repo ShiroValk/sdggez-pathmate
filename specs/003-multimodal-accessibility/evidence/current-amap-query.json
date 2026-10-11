@@ -1,0 +1,114 @@
+{
+  "observedAt": "2026-10-11T11:41:23.959Z",
+  "kind": "live-current-http",
+  "authorization": "User explicitly instructed using existing AMap key",
+  "requests": [
+    {
+      "path": "assistant/inputtips",
+      "sentAt": "2026-10-11T11:41:23.960Z",
+      "httpStatus": 200,
+      "status": "1",
+      "infocode": "10000"
+    },
+    {
+      "path": "assistant/inputtips",
+      "sentAt": "2026-10-11T11:42:04.682Z",
+      "httpStatus": 200,
+      "status": "1",
+      "infocode": "10000"
+    },
+    {
+      "path": "direction/walking",
+      "sentAt": "2026-10-11T11:42:05.002Z",
+      "httpStatus": 200,
+      "status": "1",
+      "infocode": "10000"
+    },
+    {
+      "path": "direction/driving",
+      "sentAt": "2026-10-11T11:42:05.050Z",
+      "httpStatus": 200,
+      "status": "1",
+      "infocode": "10000"
+    },
+    {
+      "path": "direction/transit/integrated",
+      "sentAt": "2026-10-11T11:42:05.175Z",
+      "httpStatus": 200,
+      "status": "1",
+      "infocode": "10000"
+    }
+  ],
+  "limits": "Public general POIs, not verified entrances; direct HTTP is not browser/UI or accessibility verification; account entitlement settings not independently verified",
+  "selectedPublicSampleNote": "Explicit selection of Hong Kong PolyU campus public POI at 114.184483,22.301814 from current named candidates; excludes the different same-name point. Not a verified campus entrance.",
+  "endpoints": [
+    {
+      "id": "public:香港理工大学",
+      "label": "香港理工大学",
+      "point": {
+        "lng": 114.184483,
+        "lat": 22.301814
+      },
+      "selectionOrigin": "explicit-public-sample"
+    },
+    {
+      "id": "public:圣德肋撒医院",
+      "label": "圣德肋撒医院",
+      "point": {
+        "lng": 114.189741,
+        "lat": 22.323363
+      },
+      "selectionOrigin": "explicit-public-sample"
+    }
+  ],
+  "routes": [
+    {
+      "mode": "walking",
+      "status": "success",
+      "plans": 1,
+      "first": {
+        "distanceM": 3248,
+        "durationS": 2598,
+        "transferCount": 0,
+        "legKinds": [
+          "walk"
+        ],
+        "geometryFragments": 14,
+        "missingFields": 0
+      }
+    },
+    {
+      "mode": "driving",
+      "status": "success",
+      "plans": 1,
+      "first": {
+        "distanceM": 4519,
+        "durationS": 684,
+        "transferCount": 0,
+        "legKinds": [
+          "drive"
+        ],
+        "geometryFragments": 14,
+        "missingFields": 0
+      }
+    },
+    {
+      "mode": "transit",
+      "status": "success",
+      "plans": 4,
+      "first": {
+        "distanceM": 4207,
+        "durationS": 2083,
+        "transferCount": null,
+        "legKinds": [
+          "walk",
+          "unknown",
+          "walk",
+          "ride"
+        ],
+        "geometryFragments": 11,
+        "missingFields": 19
+      }
+    }
+  ]
+}
