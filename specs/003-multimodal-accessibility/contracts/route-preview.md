@@ -11,6 +11,7 @@
 - 所選來源模式與實際結果來源分開：無Key、輸入／定位失敗或免費門禁未通過而未發送路線請求時，error的provenance=null，顯示「所選來源：真實查詢｜尚未調用」及原因。已發送但失敗顯示「真實查詢嘗試失敗」及實際發送時點，不宣稱取得路線；不為前置失敗補造live來源。
 - 未完成／暂緩是能力状態，沒有成功方案；原因可看见。失败显示在持續狀態区域，toast可輔助但不作唯一证据；旧文字、線、摘要、结论同步清除。
 - 可显式選replay／simulation，提示所用sample及来源；live失败畫面不自动把结果替換。页面前端demoMode或真实demo account與此route sourceMode分开。
+- 方案／同段備選切換沿用同一次查詢的不可變方案批次，以selectionVersion管理展示、accessibilityVersion管理評估；RoutePlan保留原requestId。A→B→A及備選往返不重發查詢，旧評估不得因選回相同ID而回填。改端點／方式／來源或重新查詢則失效整批方案；模型詳見data-model。
 - 只在资料充分时confirmed；一般静态设施目录只提示部分/不足与条件。不自行定位接收方、不启用追踪／录音／预约或真实通知。
 
 ## C02 — 新增內部queryRoute介面

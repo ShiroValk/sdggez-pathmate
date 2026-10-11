@@ -102,7 +102,7 @@ existing_app/
 
 ## Phase 1 — Design and bounded implementation order
 
-1. 建立共同模型、字段驗證、分段幾何與公交方案／備選區別，先用顯式測試資料核對缺失與錯誤分類。
+1. 建立共同模型、字段驗證、分段幾何與公交方案／備選區別，查詢批次保留原requestId，展示選擇與評估以selectionVersion／accessibilityVersion分開管理，RoutePlan不帶展示版本；先用顯式測試資料核對缺失與錯誤分類及方案往返。
 2. 在既有前端transport加queryRoute、公交及文字指引解析；callback使用官方規則output=JSON，保留callback與清理。檢查免費與來源條件後用少量公共樣本核真實瀏覽器返回，記錄HTTP歷史與新UI不同。
 3. 在地圖請求前（包括定位／目的地解析前）失效舊結果；所有成功與失敗回應受sequence、identity、elder、view、map instance、來源模式約束。整合三個舊入口及主要tripMap新選擇。
 4. 加一般輪椅需求、靜態設施卡與缺口結論；匹配不到路段時只作背景，既有样本无完整证据保持不足。無障礙開關只重新評估目前方案，不額外調用付費或新路由。

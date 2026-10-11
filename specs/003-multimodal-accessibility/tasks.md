@@ -31,11 +31,11 @@
 
 **Purpose**: 共同資料、版本、來源與輸入邊界；純模塊不需Key、DB或服務。
 
-- [ ] T005 在 `existing_app/client/src/pages/MemoPathPage/route-model.ts` 定義Endpoint、Selection／Context、RequestAttempt、Plan／Leg／Step／RideOption／Fragment、Evidence／Conclusion及DeliveryScopeRow型別，逐項承接data-model全部欄位而不改舊AmpRoute；落实「nullable明確用null」「walking／driving／transit允許值；任意其他字串拒絕，不默認駕車」「selectionOrigin=public-search/device/explicit-public-sample」「sourceMode=live/replay/simulation」及「success{plans:非空RoutePlan[], provenance, warnings[]}」，錯誤類別用原允許值「invalid-input/config/position-denied/position-timeout/position-unavailable/transport/timeout/provider/permission/quota/invalid-response/unknown」，不是任意字串。
+- [ ] T005 在 `existing_app/client/src/pages/MemoPathPage/route-model.ts` 定義Endpoint、Selection／Context、RequestAttempt、RoutePresentation、Plan／Leg／Step／RideOption／Fragment、Evidence／Conclusion及DeliveryScopeRow型別，逐項承接data-model全部欄位而不改舊AmpRoute；落实「nullable明確用null」「walking／driving／transit允許值；任意其他字串拒絕，不默認駕車」「selectionOrigin=public-search/device/explicit-public-sample」「sourceMode=live/replay/simulation」及「success{plans:非空RoutePlan[], provenance, warnings[]}」，錯誤類別用原允許值「invalid-input/config/position-denied/position-timeout/position-unavailable/transport/timeout/provider/permission/quota/invalid-response/unknown」，不是任意字串。
 - [ ] T006 在 `existing_app/client/src/pages/MemoPathPage/route-model.ts` 實作輸入與嵌套資料驗證及安全文字策略，保留「有限經度[-180,180]、緯度[-90,90]，合法0保留；空分量／不完整坐標拒絕」、數值「number或null，有限且>=0；空字串、空陣列、負值、NaN、Infinity為null＋MissingField」、MissingField「reason=not-provided/invalid/unsupported」，不先Number(raw??0)；方案／備選ID只接受當前結果成員，不插入不可信HTML。
-- [ ] T007 在 `existing_app/client/src/pages/MemoPathPage/route-state.ts` 建立純QueryState與immutable request匹配／invalidate，承接「idle/resolving/loading/success/no-route/error/not-implemented」，requestId在定位／候選解析前取得；selectionVersion／accessibilityVersion分離，key含端點／mode／source／identity／elder／view／map epoch，不序列化token，輪椅開關不使請求永久loading。
+- [ ] T007 在 `existing_app/client/src/pages/MemoPathPage/route-state.ts` 建立純QueryState與immutable request匹配／invalidate，承接「idle/resolving/loading/success/no-route/error/not-implemented」，requestId在定位／候選解析前取得；requestId＋RequestContext管理不可變查詢批次，selectedPlanId／selectedRideOptionIds＋selectionVersion管理展示，accessibilityVersion管理評估；RoutePlan不帶selectionVersion，key含端點／mode／source／sample／identity／elder／view／map epoch，不序列化token，輪椅開關不使請求永久loading。
 - [ ] T008 在 `existing_app/client/src/pages/MemoPathPage/route-model.ts` 建立來源與完成狀態驗證，承接「kind=live/static/simulated」、static「subtype=facility-summary/historical-replay」、「originalQueriedAt:null或時間」「publishedAt/updatedAt:null或來源日期」及「implemented/not-implemented/deferred與reason；與sourceKind獨立」；無日期明示未知，歷史重播不改成當次live；驗requestedSourceMode與RequestAttempt，請求前error／not-implemented的provenance=null、sentAt=null，不因選live而造當次查詢來源。
-- [ ] T009 在 `existing_app/tests/integration/route-state.test.ts` 撰寫並運行基礎斷言：前置解析／定位已有requestId、舊成功／失敗不匹配、identity／elder／view／map／source epoch、同屏往返、輪椅版本獨立與輸入允許值；修正T005–T008問題後記V01/V05於 `specs/003-multimodal-accessibility/verification.md`，不需DB／Key。
+- [ ] T009 在 `existing_app/tests/integration/route-state.test.ts` 撰寫並運行基礎斷言：前置解析／定位已有requestId、舊成功／失敗不匹配、identity／elder／view／map／source epoch、同屏往返、輪椅版本獨立與輸入允許值、選擇不改原requestId及批次、評估context含兩種版本與選擇ID；修正T005–T008問題後記V01/V05於 `specs/003-multimodal-accessibility/verification.md`，不需DB／Key。
 
 **Checkpoint**: T005–T009完成且純測試可運行後整合故事；不等於瀏覽器隔離已通過。
 
@@ -56,7 +56,7 @@
 - [ ] T013 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts` 新增 `queryRoute(query: RouteQuery): Promise<RouteQueryOutcome>`，沿用v3 walking／driving及transit/integrated、香港city／cityd、extensions=all；transport用output=JSON＋callback、保留10秒及timer／script／callback清理，錯誤按可靠訊號分類，只有路線transport實際發送才記requestAttempt=sent與sentAt，前置失敗為not-sent／null來源；舊planRoute／AmpRoute／formatter签名及策略保持，無代理或新服務。
 - [ ] T014 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 解耦initLocationMap與強制定位，加公共起終點明確選擇、合法候選及同名待選；行程仍保存原目的地文字，定位拒絕可選公共點建圖，解析／定位前同步invalidate，不猜第一同名或虛構origin。
 - [ ] T015 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 加tripMap三方式與mode控件，內部planAndDraw用queryRoute及共享state，搜索／返家保留walking；新請求先清全部舊呈現，每await及catch核context，加初步來源／未完成／失敗狀態，不能為演示暫時绕过隔離或来源。
-- [ ] T016 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 呈現摘要、Step、接駁／站點／線路／換乘及方案／備選控件，缺字段明示；新formatter的null與0分開、0為0米／0秒，不用舊最少1策略；備選不增加乘車段、不保留不適用總量、不發新請求。
+- [ ] T016 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 呈現摘要、Step、接駁／站點／線路／換乘及方案／備選控件，缺字段明示；新formatter的null與0分開、0為0米／0秒，不用舊最少1策略；備選不增加乘車段、不保留不適用總量、不發新請求；驗當前批次成員ID，以選擇導出RoutePresentation，切完整方案／備選遞增兩種版本、清舊呈現與結論，原RoutePlan／requestId不改。
 - [ ] T017 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts` 增fragment／leg／選定alternative分段繪圖，未知幾何不補線、不串不同候選，無幾何仍可讀文字，marker不當完整路線；保持地圖建立／銷毀及其他覆蓋物。
 - [ ] T018 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-styles.ts` 增方式／方案／備選、持續狀態、指引及来源標籤窄屏／焦點樣式，配合engine三語及button/select，不只靠顏色，不重寫已有布局。
 - [ ] T019 [US1] 運行 `existing_app/tests/integration/route-model.test.ts`、共享state測試及 `npm.cmd run type:check:client`，修正後於 `specs/003-multimodal-accessibility/verification.md` 記V01/V02退出碼及合成邊界；檔案不存在／未執行不算passed。
@@ -73,16 +73,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] 在 `existing_app/tests/integration/route-state.test.ts` 擴充V05/V06：解析期切點、定位期切mode、正反快切、遲到success／no-route／catch、同screen往返、身份／elder／demo／source／map換代、重試用目前選擇及loading輪椅toggle；預期模擬錯誤與真實結果分開；補無Key／無效輸入／定位拒絕／免費門禁未通過的not-sent及null來源，與已發送網絡／provider失敗的sent及live來源斷言。
+- [ ] T022 [P] [US2] 在 `existing_app/tests/integration/route-state.test.ts` 擴充V05/V06：解析期切點、定位期切mode、正反快切、遲到success／no-route／catch、同screen往返、身份／elder／demo／source／map換代、重試用目前選擇及loading輪椅toggle、A→B→A與同段備選往返不新增路線請求、ID相同但舊版本評估仍丟棄、新查詢不接受舊批次；預期模擬錯誤與真實結果分開；補無Key／無效輸入／定位拒絕／免費門禁未通過的not-sent及null來源，與已發送網絡／provider失敗的sent及live來源斷言。
 - [ ] T023 [P] [US2] 在 `existing_app/tests/integration/route-ui.validation.ts` 建有界瀏覽器控制及重現情境，明示合成供應商／定位錯誤／延遲，只生成當次臨時資料、無常駐夾具；操作有日誌，結束清理timer／腳本／臨時服務／合成帳號，不動真實關聯。
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] 在 `existing_app/client/src/pages/MemoPathPage/route-state.ts` 補transition及全結果失效，no-route／error／not-implemented無舊plan；route與accessibility版本分離，全部異步需目前context，支持重試／取消及地圖換代失效。
+- [ ] T024 [US2] 在 `existing_app/client/src/pages/MemoPathPage/route-state.ts` 補transition及全結果失效，no-route／error／not-implemented無舊plan；查詢／展示／評估身份按data-model分工，選方案不失效原查詢批次，改端點／方式／來源則整批失效；路線返回核RequestContext，評估返回核requestId、兩種版本、方案／備選ID及身份／視圖context，支持重試／取消及地圖換代失效。
 - [ ] T025 [US2] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 統一nav／back、clearIdentityData、403清理、長者／角色／demoMode、地圖重建及卸載invalidate，清旧线／摘要／指引／證據／私人端點；guard含container.isConnected、map instance、identity/current，成功與catch均無舊toast／回填。
 - [ ] T026 [US2] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 實作持續可辨查詢中／無路線／失敗／未完成、定位拒絕／超時／缺坐標／已知provider／quota提示，保留輸入及修改／手動重試；未知原因不猜、live失敗不改sourceMode或模擬成功；未發送顯示所選來源與「尚未調用」，已發送失敗標查詢嘗試，不宣稱取得路線。
 - [ ] T027 [US2] 在 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts` 核取消／超時的timer／script／callback及地圖清理，不可取消則最多既有10秒結束；丟棄結果不等同清理，不增無限重試或服務費。
-- [ ] T028 [US2] 運行state測試並用 `existing_app/tests/integration/route-ui.validation.ts` 按V05/V06觀察舊導航／新入口，涵蓋前置解析定位、快切遲到、失敗重試與全部context；截圖證明四類旧內容撤銷，網絡／狀態證據核未發送前置失敗的null來源及已發送失敗的live嘗試，將退出碼／模擬控制／真實自然失敗分列於 `specs/003-multimodal-accessibility/verification.md`。
+- [ ] T028 [US2] 運行state測試並用 `existing_app/tests/integration/route-ui.validation.ts` 按V05/V06觀察舊導航／新入口，涵蓋前置解析定位、快切遲到、失敗重試與全部context；截圖證明四類旧內容撤銷，網絡／狀態證據核A→B→A及同段備選往返的路線請求增量0、舊評估不回填、新查詢不接受舊批次，並核未發送前置失敗的null來源及已發送失敗的live嘗試，將退出碼／模擬控制／真實自然失敗分列於 `specs/003-multimodal-accessibility/verification.md`。
 - [ ] T029 [US2] 在 `specs/003-multimodal-accessibility/verification.md` 更新FR-005–007、SC-003–004結果／未驗原因，review身份與公開契約後存US2 checkpoint，不把未取得运行證據的guard稱全部通過。
 
 **Checkpoint**: US2在舊兩方式可獨立驗證；US1已做時補驗新增入口，展示明示未驗／暫緩。
@@ -103,7 +103,7 @@
 - [ ] T032 [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-accessibility.ts` 實作來源原日期精度／時區與dateAssessment，承接「published／updated／validFrom／validUntil可null」「status=known-date/no-date/expired/conflicting」，查閱非更新日、無統一TTL；較新資料不自動消除事實衝突，過期僅作歷史背景。
 - [ ] T033 [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-accessibility.ts` 實作Assistance／Conclusion，承接「required:boolean」「type=staff-portable-ramp/other」「availability=applicable-confirmed/conditional/unknown/unavailable」「bookingStatus=not-booked」「status=confirmed/partial/insufficient」「simulated:boolean」；一般介紹非本次確認，必要段適用且無未解缺口才confirmed，障礙顯著披露，模擬不支持真實confirmed。
 - [ ] T034 [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-preview-data.ts` 加T003許可允許的尖東／科學館／藝術館少量靜態摘要、exact-facility／background綁定、來源／原日期／查閱日／條件／缺口；許可未知不複製，只連來源及不足，1米接駁或一般POI非可達；另用顯式模擬供邊界測試。
-- [ ] T035 [US3] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 加一般輪椅開關，落实「enabled:boolean，profile固定general-wheelchair」，按目前方案／備選與accessibilityVersion評估、不重發路線；loading切開關仍接受route後用最新需求，無設備細分或假輪椅專用路由。
+- [ ] T035 [US3] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 加一般輪椅開關，落实「enabled:boolean，profile固定general-wheelchair」，按requestId、selectionVersion、accessibilityVersion、目前方案／備選及身份／視圖context接受評估，依據更新遞增accessibilityVersion、不重發路線；loading切開關仍接受route後用最新需求，無設備細分或假輪椅專用路由。
 - [ ] T036 [US3] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 顯示三類結論、具體設施／段或背景、缺口、日期未知／過期／衝突、障礙與斜板條件；步行街道入口、公交站台車輛接駁、駕車drop-off／parking未知分列；關需求無確認徽章、更換方案無舊結論。
 - [ ] T037 [US3] 在 `existing_app/client/src/pages/MemoPathPage/memopath-styles.ts` 加卡片／日期／來源／缺口／障礙／協助窄屏與鍵盤可讀樣式，配合三語文案，狀態不只靠顏色、不暗示即時正常或已預約。
 - [ ] T038 [US3] 運行 `existing_app/tests/integration/route-accessibility.test.ts` 並在瀏覽器驗六類邊界、路線／備選／開關及live路線＋static資料，將查閱、模擬及真實分列於 `specs/003-multimodal-accessibility/verification.md` V07/V08；真實全程數可0，模擬confirmed不補數。

@@ -28,6 +28,8 @@
 
 **Alternatives considered**: 只加AbortController、只檢查mode、只清線不清提示／摘要，均不足。清理timer／script／callback仍按transport結束或取消有界執行，不把丟棄結果等同資源已清理。
 
+**I1澄清（2026-10-11，用戶採納）**: requestId＋RequestContext管理查詢，selectionVersion管理目前方案／同段備選，accessibilityVersion管理輪椅與依據評估。RoutePlan保留原查詢身份、不帶展示版本；選擇只導出RoutePresentation，不重查或改寫原批次。評估必須核兩種版本、方案／備選及完整上下文，因此A→B→A也拒絕第一次A的遲到評估。新查詢失效整批舊方案。未採用切換選擇後改寫原RoutePlan版本的做法，以免混淆查詢證據和展示狀態；無受支持API、服務或DB變更。
+
 ## R04 — 無障礙是獨立證據評估
 
 **Decision**: 一般輪椅需求為單一開關，證據可匹配某段／入口或僅背景；三類結論與已知障礙獨立。日期未知、過期、衝突或所需協助未確認保留缺口。沒有完整證據時不呈現真實已確認。
