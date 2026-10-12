@@ -158,4 +158,4 @@ verify-baseline核对归档哈希与恢复receipt，在恢复库只新增并清�
 
 運行與限制見[003 quickstart](../specs/003-multimodal-accessibility/quickstart.md)及[31項交付證據](../specs/003-multimodal-accessibility/verification.md)。本次20項純邏輯＋52項受控UI通過，lint/build通過；contracts／permissions／auth／demo首次因_test資料庫不可用而受阻；原Docker／DB恢復後四套已全部通過（E07）。不得以模擬取代當次真實查詢或正式後端驗收。
 
-003續作：真實D01兩方式及公交no-route、D03三方式、D04公交換乘瀏覽器證據已記錄於 `../specs/003-multimodal-accessibility/verification.md` E08/E09；純測試25/25、受控UI67/67、lint/build通過。主頁搜尋與返家保留步行，返家使用可滾動公共點規劃。未改API/權限/DB；真實長者身份全部舊入口UI仍未驗。
+003續作：E08真實D01兩方式及公交no-route、D03三方式、D04公交換乘；E10補實際認證長者來源與離頁／登出／演示切換，受控UI81/81（外部provider與GPS不調用）。純測試25/25及lint/build通過。主頁搜尋與返家保留步行，返家使用可滾動公共點規劃。未改API/權限/DB；52/53任務完成，私有高德權益核查仍待使用者資料。各項當次與受控證據見verification。

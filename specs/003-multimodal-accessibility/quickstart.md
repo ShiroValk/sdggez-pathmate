@@ -88,3 +88,5 @@ node --import tsx tests/integration/route-ui.validation.ts
 產出本feature evidence/browser-validation.json及browser-simulation.png；獨立临時profile／bundle／loopback服務在finally清理，無帳號夾具。Windows沙箱若不允許啟動Chrome或SWC路徑讀取，應對原命令請求執行權限，不改檢查以假稱通過。DB契約回歸首次受阻；原Docker／DB已恢復並逐套通過（E07），目前3000／5173服務運行。往後停機時先恢復Docker Desktop及原db容器，再執行上述命令；不把受控返回或preview當真實後端證據。
 
 本輪續作（E08/E09）：真實D01步行/駕車、公交no-route；D03三方式與D04換乘UI已驗，25純測試/67受控UI及lint/build通過。主頁搜尋/返家保留步行；返家進可滾動預覽，不以地圖或定位成功作前置。真實長者身份的全部舊入口切換仍待驗，現有demo家屬角色及權限保持；私有高德權益、官方正文許可與歷史payload仍有限制。詳細以最新verification為準。
+
+最新E10（2026-10-12）：實際SQL認證長者的來源/離頁/登出/前端演示切換完成；舊導航受控回歸81/81。52/53任務完成，T002私有高德權益仍待核查；受控provider失敗與實際查詢分列，詳見verification。

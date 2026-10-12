@@ -82,7 +82,7 @@
 - [X] T025 [US2] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 統一nav／back、clearIdentityData、403清理、長者／角色／demoMode、地圖重建及卸載invalidate，清旧线／摘要／指引／證據／私人端點；guard含container.isConnected、map instance、identity/current，成功與catch均無舊toast／回填。
 - [X] T026 [US2] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 實作持續可辨查詢中／無路線／失敗／未完成、定位拒絕／超時／缺坐標／已知provider／quota提示，保留輸入及修改／手動重試；未知原因不猜、live失敗不改sourceMode或模擬成功；未發送顯示所選來源與「尚未調用」，已發送失敗標查詢嘗試，不宣稱取得路線。
 - [X] T027 [US2] 在 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts` 核取消／超時的timer／script／callback及地圖清理，不可取消則最多既有10秒結束；丟棄結果不等同清理，不增無限重試或服務費。
-- [ ] T028 [US2] 運行state測試並用 `existing_app/tests/integration/route-ui.validation.ts` 按V05/V06觀察舊導航／新入口，涵蓋前置解析定位、快切遲到、失敗重試與全部context；截圖證明四類旧內容撤銷，網絡／狀態證據核A→B→A及同段備選往返的路線請求增量0、舊評估不回填、新查詢不接受舊批次，並核未發送前置失敗的null來源及已發送失敗的live嘗試，將退出碼／模擬控制／真實自然失敗分列於 `specs/003-multimodal-accessibility/verification.md`。
+- [X] T028 [US2] 運行state測試並用 `existing_app/tests/integration/route-ui.validation.ts` 按V05/V06觀察舊導航／新入口，涵蓋前置解析定位、快切遲到、失敗重試與全部context；截圖證明四類旧內容撤銷，網絡／狀態證據核A→B→A及同段備選往返的路線請求增量0、舊評估不回填、新查詢不接受舊批次，並核未發送前置失敗的null來源及已發送失敗的live嘗試，將退出碼／模擬控制／真實自然失敗分列於 `specs/003-multimodal-accessibility/verification.md`。
 - [X] T029 [US2] 在 `specs/003-multimodal-accessibility/verification.md` 更新FR-005–007、SC-003–004結果／未驗原因，review身份與公開契約後存US2 checkpoint，不把未取得运行證據的guard稱全部通過。
 
 **Checkpoint**: US2在舊兩方式可獨立驗證；US1已做時補驗新增入口，展示明示未驗／暫緩。
@@ -119,7 +119,7 @@
 
 ### Tests for User Story 4
 
-- [ ] T040 [P] [US4] 在 `existing_app/tests/integration/route-ui.validation.ts` 擴V08：live失敗仍live錯誤、明確切replay／simulation新context、舊回應不回填、前端／真實demo account不代替route來源、每項標籤與分母及未完成原因；模擬confirmed非真實。
+- [X] T040 [P] [US4] 在 `existing_app/tests/integration/route-ui.validation.ts` 擴V08：live失敗仍live錯誤、明確切replay／simulation新context、舊回應不回填、前端／真實demo account不代替route來源、每項標籤與分母及未完成原因；模擬confirmed非真實。
 
 ### Implementation for User Story 4
 
@@ -136,7 +136,7 @@
 
 **Purpose**: 相容／權限回歸、文檔／構建與一次有界故事，非全PRD重做。
 
-- [ ] T047 核 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts`／`memopath-engine.ts` 的legacy planRoute／AmpRoute／formatter與三舊導航，復檢四搜索入口JSON＋callback後的成功、錯誤、舊回調／重試／輸入保留／清理，於 `specs/003-multimodal-accessibility/verification.md` 記V10，不改公開字段／錯誤或職責。
+- [X] T047 核 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts`／`memopath-engine.ts` 的legacy planRoute／AmpRoute／formatter與三舊導航，復檢四搜索入口JSON＋callback後的成功、錯誤、舊回調／重試／輸入保留／清理，於 `specs/003-multimodal-accessibility/verification.md` 記V10，不改公開字段／錯誤或職責。
 - [X] T048 運行 `existing_app/tests/integration/position-cache.test.ts` 及既有contracts／permissions／auth／demo四套（獨立_test庫，dispatcher不含新route tests），核 `existing_app/server/`／`existing_app/shared/` 無新契約／遷移，脫敏網絡無新周期位置寫入、共享绕过／錄音／手表依賴，於 `specs/003-multimodal-accessibility/verification.md` 記V10及阻塞。
 - [X] T049 在 `existing_app/client/src/pages/MemoPathPage/route-model.ts`、`route-state.ts`、`route-accessibility.ts`、`route-preview-data.ts` 及被改amap／engine完善模塊／公共函數職責、輸入輸出、失敗、副作用／權限／來源／資源文檔，審 `specs/003-multimodal-accessibility/contracts/route-preview.md` 相容與回退；確需不相容／調職先具體方案確認，需遷移先完整回滾，不提前執行。
 - [X] T050 依 `specs/003-multimodal-accessibility/quickstart.md` 明確運行3個新route測試、`npm.cmd run lint`、`npm.cmd run build`，匹配產物做適用UI復檢；新改動／失敗才擴大測試，不無故重複全量，於 `specs/003-multimodal-accessibility/verification.md` 記V11退出碼／產物／範圍。
@@ -243,6 +243,6 @@ US1→US2→US3→US4各適用測試／UI及證據後checkpoint；暫緩有原�
 
 ## 本次未勾項及可完成範圍
 
-49/53已完成。本輪T020/T022/T034/T038/T044/T051以E08/E09完成：D01保留公交no-route、D03補真實三方式、D04換乘；許可未知按T034明定降級，只連官方來源、不複製摘要。純測試25及受控UI67通過。
+52/53已完成。E08/E09補真實公共點三方式、換乘與保守提示；E10補實際SQL認證長者的來源／離頁／登出／前端演示切換及舊導航受控回歸81/81，T028/T040/T047完成。各證據邊界見verification；受控成功不是真實供應商成功。
 
-T002：私有免費/付費設定仍未核驗，使用者已明確授權現有Key，本輪有界調用不因此重阻。T028/T040：完整context純/受控UI、真實demo登入登出與前端身份來源分離有證據；現有demo為家屬角色，未擴大權限，真實長者身份路線切換仍缺。T047：主頁步行/返家步行/三方式入口及四搜尋受控回歸已補，三舊入口全部真實身份/定位生命周期未驗。未執行部分不算passed；原資料庫阻塞已解除、E07四套通過。
+T002：私有免費/付費設定仍未核驗，使用者已明確授權現有Key，有界調用不因此重阻。官方正文與完整歷史payload按原契約明示未載入／未完成，不假造成功；D02未查、沒有實地或真實全程confirmed。E10真實帳號使用本次合成資料及獨立_test庫，外部provider由CSP刻意阻擋；定位拒絕／遲到及全context由受控測試補，不宣稱所有舊入口完成真實GPS或真實provider端到端。

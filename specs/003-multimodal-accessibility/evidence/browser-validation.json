@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-11T12:14:02.483Z",
+  "date": "2026-10-12T00:31:11.985Z",
   "sourceLabels": {
     "displayedItems": 6,
     "labelledItems": 6,
@@ -207,7 +207,63 @@
       "passed": true
     },
     {
+      "name": "legacy home search navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy home search navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy home search navigation leave aborts callback and clears route page",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place preserves driving default",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place navigation leave aborts callback and clears route page",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled destination preserves driving text draft",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled navigation leave aborts callback and clears route page",
+      "passed": true
+    },
+    {
       "name": "legacy home navigation offers scrollable walking inputs without map/GPS prerequisite",
+      "passed": true
+    },
+    {
+      "name": "legacy return home navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy return home navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy return home navigation leave aborts callback and clears route page",
       "passed": true
     },
     {
