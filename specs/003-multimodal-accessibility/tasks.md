@@ -1,5 +1,7 @@
 # Tasks: 多出行方式與無障礙提示
 
+**R2有效範圍（2026-10-12）**：T001–T053及其分組／勾選／統計保留R1歷史，原模擬／回放產品工作已被新spec取代，不要重新執行或抹掉完成記錄。當前增量從T054開始，見文末；私有權益T002仍待資料，不阻使用者已授權Key的有界查詢。
+
 **Input**: [plan.md](plan.md)、[spec.md](spec.md)、[research.md](research.md)、[data-model.md](data-model.md)、[contracts/route-preview.md](contracts/route-preview.md)、[quickstart.md](quickstart.md)、[verification.md](verification.md)。
 
 **Prerequisites**: 設計已完成；實作時核對`feat/003-multimodal-accessibility`、`.specify/feature.json`與環境覆寫。生成基線`d17ed62`，工作區乾淨。
@@ -246,3 +248,79 @@ US1→US2→US3→US4各適用測試／UI及證據後checkpoint；暫緩有原�
 52/53已完成。E08/E09補真實公共點三方式、換乘與保守提示；E10補實際SQL認證長者的來源／離頁／登出／前端演示切換及舊導航受控回歸81/81，T028/T040/T047完成。各證據邊界見verification；受控成功不是真實供應商成功。
 
 T002：私有免費/付費設定仍未核驗，使用者已明確授權現有Key，有界調用不因此重阻。官方正文與完整歷史payload按原契約明示未載入／未完成，不假造成功；D02未查、沒有實地或真實全程confirmed。E10真實帳號使用本次合成資料及獨立_test庫，外部provider由CSP刻意阻擋；定位拒絕／遲到及全context由受控測試補，不宣稱所有舊入口完成真實GPS或真實provider端到端。
+
+## R2 增量任務：普通入口真實使用（2026-10-12）
+
+R1完成52/53只是歷史；本批14項T054–T067需獨立驗證。無新功能號、DB migration或新service。
+
+### Setup / 一致性
+
+- [ ] T054 在 `specs/003-multimodal-accessibility/spec.md`、`plan.md`、`data-model.md`、`contracts/route-preview.md` 與本任務表完成只讀一致性分析，核23FR/8SC覆蓋、歷史隔離、服務/API/模式識別及rollback，記分析結果於本次交付證據。
+- [ ] T055 在 `existing_app/tests/integration/route-test-data.ts` 搬入原合成route/evidence，改相應純測試import與 `route-ui.validation.ts` 測試預期；產品 `route-preview-data.ts` 不保留合成情境，R2輸出不覆寫E01–E10。
+
+### US1：普通入口 → 地點 → 方式 → 真實地圖／指引
+
+- [ ] T056 [US1] 修 `existing_app/client/src/pages/MemoPathPage/route-preview.ts` 與 `route-preview-data.ts`：香港公共preset、名稱搜索明選/定位Endpoint、無手填coords/source/scenario/replay，三方式44px按鈕、分鐘／小時和米／公里、details步驟與來源。
+- [ ] T057 [US1] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 與 `memopath-styles.ts`：同tripMap掛現有真實AMap底圖、分段線與起終marker、fitView，SDK遲到隔離、map錯誤單獨重試、離頁destroy，無GPS前置或SVG假底圖。
+- [ ] T058 [US1] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：移除專用route-preview-entry，首頁搜索/常用點/行程/返家直接同頁带目的地；已知位置及唯一精確preset/places匹配直接帶入，其他名称明選不猜第一候選。
+
+### US2：Live失敗與生命期
+
+- [ ] T059 [US2] 修 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts`／`route-preview.ts`：產品query固定live、拒非live；前置/已發送失败分辨、保留地点與方式、明確重試/改點；新搜尋/GPS/query及context清舊結果，map/request序列分開，保留方案/備選增量0與legacy相容測試。
+
+### US3：有依據的簡短提示
+
+- [ ] T060 [US3] 修 `existing_app/client/src/pages/MemoPathPage/route-preview.ts`：一般輪椅需求只評估，無選結論；不足短句、障礙/協助直接顯示，詳細依據/日期/缺口展開，測試局部/未知/過期/衝突/障礙/協助/完整不誤confirmed。
+
+### US4：演示頁內資料／普通保存
+
+- [ ] T061 [US4] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：frontend demo及verified.isDemo使用同RAM業務分支，認證/登出保留；短句提示、香港公共地点及行程預設；普通API、角色、错误與保存不改。
+- [ ] T062 [US4] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：演示按elder保存/恢复RAM快照，不寫ELDER_KEY；非業務session view識別供刷新重建preset，登出/切身份清理，业务修改/coords不入storage，無儲存方式設定。
+- [ ] T063 [US4] 擴 `existing_app/tests/integration/route-ui.validation.ts`：普通入口、390px/鍵盤/無多餘控件，demo新增/編輯/刪除place/trip/elder/setting/geofence及跨頁/切elder/刷新RAM恢復，business API寫入0；受控map/route/search錯誤、GPS與全部context隔離。
+- [ ] T064 [US4] 擴 `existing_app/tests/integration/route-identity.fixture.ts` 及適用真實業務測試：獨立_test庫合成普通帳號真實保存/重讀與權限失敗、verified demo client業務寫入0，測試services/accounts清理0，不改開發DB。
+
+### Polish / 當次運行與交付
+
+- [ ] T065 運行 `existing_app` 純模型/状态/accessibility/cache、R2 controlled UI、lint/build、contracts/permissions/auth/demo適用回歸，退出碼與產物記 `specs/003-multimodal-accessibility/verification.md`，不擴無關能力。
+- [ ] T066 從普通入口以預設理大→醫院完成三方式真實查詢/地圖/指引，必要機場公交参照及名稱搜索一次，核390px及demo刷新、請求類別/次數，保存脫敏R2截圖/運行記錄到 `specs/003-multimodal-accessibility/evidence/`，失敗不fake或無限重試。
+- [ ] T067 更新 `specs/003-multimodal-accessibility/verification.md` 31行R2範圍/限制與 `existing_app/README.md`／`quickstart.md`／代碼职责文檔，保持R1歷史證據；核links/diff/秘密與清理，按Git extension提交實作checkpoint。
+
+### Dependencies / implementation strategy
+
+T054→T055→T056→T057→T058→T059→T060→T061→T062→T063→T064→T065→T066→T067。同檔工作順序處理；模型fixture可先寫後產品實作。四故事各有獨立驗收（真實導航／狀態失敗／提示／保存），主故事优先。沒有新增並行寫入相同engine的任務，研究代理唯讀完成後不參與編輯。
+
+### R2 requirements coverage
+
+| 要求 | 增量任務 |
+| --- | --- |
+| FR-001 | T056–T058/T063/T066 |
+| FR-002 | T056/T058/T059/T063/T066 |
+| FR-003 | T056/T057/T063/T066 |
+| FR-004 | T055/T056/T059/T065/T066 |
+| FR-005 | T057/T059/T063 |
+| FR-006 | T057/T059/T062/T063 |
+| FR-007 | T056/T057/T059/T063 |
+| FR-008 | T060/T063 |
+| FR-009 | T055/T060/T065 |
+| FR-010 | T055/T060/T065 |
+| FR-011 | T060/T063 |
+| FR-012 | T056/T060/T067 |
+| FR-013 | T055/T060/T065 |
+| FR-014 | T055/T060/T065 |
+| FR-015 | T060/T065 |
+| FR-016 | T055/T057/T059/T066 |
+| FR-017 | T055/T056/T059/T063 |
+| FR-018 | T056/T058/T061/T066 |
+| FR-019 | T054/T067 |
+| FR-020 | T066/T067 |
+| FR-021 | T059/T066/T067 |
+| FR-022 | T054/T059/T062/T064/T065 |
+| FR-023 | T061–T065 |
+| SC-001 | T056–T058/T066 |
+| SC-002 | T055/T056/T066 |
+| SC-003 | T057/T059/T062/T063 |
+| SC-004 | T057/T059/T063 |
+| SC-005 | T055/T060/T063/T065 |
+| SC-006 | T056/T058/T063/T066 |
+| SC-007 | T054/T067 |
+| SC-008 | T061–T066 |
