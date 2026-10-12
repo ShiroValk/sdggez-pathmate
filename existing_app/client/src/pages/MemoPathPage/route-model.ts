@@ -159,14 +159,21 @@ function option(raw:unknown,id:string,legId:string,index:number,gaps:MissingFiel
  const o:RideOption={id,providerLineId:textField(r.id,200),name:textField(r.name),transportType:textField(r.type)??(rail?'rail':null),departureStop:stop(r.departure_stop),arrivalStop:stop(r.arrival_stop),distanceM:missing(r.distance,`${id}.distance`,gaps),durationS:missing(r.duration,`${id}.duration`,gaps),geometry:geometry(r.polyline,legId,index,id,gaps),viaStops:Array.isArray(r.via_stops)?r.via_stops.map(stop):[],sourceIndex:index};
  if(!o.name)gaps.push({path:`${id}.name`,reason:'not-provided'});for(const key of ['departureStop','arrivalStop'] as const)if(!o[key].name)gaps.push({path:`${id}.${key}.name`,reason:'not-provided'});return o;
 }
+/** Provider substructures may contain only empty array placeholders. They carry
+ * no ride evidence; populated but unsupported structures still retain a gap. */
+function hasProviderContent(value:unknown):boolean{
+ if(Array.isArray(value))return value.some(hasProviderContent);
+ if(value&&typeof value==='object')return Object.values(value).some(hasProviderContent);
+ return value!==null&&value!==undefined&&(typeof value!=='string'||value.trim()!=='');
+}
 function transitLegs(raw:unknown,id:string,gaps:MissingField[],unsupported:string[]):RouteLeg[]{
  if(!Array.isArray(raw)){gaps.push({path:`${id}.segments`,reason:'not-provided'});return [];}
  const result:RouteLeg[]=[];
  for(let i=0;i<raw.length;i++){
   const s=record(raw[i]),walk=record(s.walking),bus=record(s.bus),rail=record(s.railway);
   if(Object.keys(walk).length)result.push(walkLeg(walk,`${id}:walk:${i}`,result.length,i,'walk'));
-  const lines=Array.isArray(bus.buslines)?bus.buslines:[];const hasRail=Object.keys(rail).length>0;
-  const unknown=(!Object.keys(s).length)||(Object.keys(bus).length>0&&!Array.isArray(bus.buslines))||(lines.length>0&&hasRail)||['taxi','coach'].some(k=>Object.keys(record(s[k])).length>0);
+  const lines=Array.isArray(bus.buslines)?bus.buslines:[];const hasRail=hasProviderContent(rail);
+  const unknown=(!Object.keys(s).length)||(Object.keys(bus).length>0&&!Array.isArray(bus.buslines))||(lines.length>0&&hasRail)||['taxi','coach'].some(k=>hasProviderContent(s[k]));
   if(unknown){const l=baseLeg(`${id}:unknown:${i}`,result.length,i,'unknown');l.missingFields.push({path:l.id,reason:'unsupported'});result.push(l);unsupported.push(l.id);continue;}
   const candidates=hasRail?[rail]:lines;
   if(candidates.length){const l=baseLeg(`${id}:ride:${i}`,result.length,i,'ride');l.alternatives=candidates.map((r,j)=>option(r,`${l.id}:option:${j}`,l.id,j,l.missingFields,hasRail)).filter((r):r is RideOption=>r!==null);

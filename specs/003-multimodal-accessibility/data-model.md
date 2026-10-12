@@ -1,6 +1,6 @@
 # Data Model: 三方式、查詢狀態與無障礙依據
 
-日期2026-10-11，設計文件；以下型別為實作契約草案，尚未加入業務代碼。不新增DB、API DTO或持久化偏好。欄位以camelCase命名，nullable明確用null；現有tsconfig關閉strictNullChecks，不能只靠型別，須有運行驗證。
+日期2026-10-11，實作契約；以下型別已於client route模塊實作，驗證範圍見verification。不新增DB、API DTO或持久化偏好。欄位以camelCase命名，nullable明確用null；現有tsconfig關閉strictNullChecks，不能只靠型別，須有運行驗證。
 
 ## 1. 基本值與來源
 

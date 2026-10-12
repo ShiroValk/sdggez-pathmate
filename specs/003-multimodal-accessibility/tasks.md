@@ -60,7 +60,7 @@
 - [X] T017 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts` 增fragment／leg／選定alternative分段繪圖，未知幾何不補線、不串不同候選，無幾何仍可讀文字，marker不當完整路線；保持地圖建立／銷毀及其他覆蓋物。
 - [X] T018 [US1] 在 `existing_app/client/src/pages/MemoPathPage/memopath-styles.ts` 增方式／方案／備選、持續狀態、指引及来源標籤窄屏／焦點樣式，配合engine三語及button/select，不只靠顏色，不重寫已有布局。
 - [X] T019 [US1] 運行 `existing_app/tests/integration/route-model.test.ts`、共享state測試及 `npm.cmd run type:check:client`，修正後於 `specs/003-multimodal-accessibility/verification.md` 記V01/V02退出碼及合成邊界；檔案不存在／未執行不算passed。
-- [ ] T020 [US1] 依 `specs/003-multimodal-accessibility/quickstart.md` D01／D02優先、D03補足、D04換乘，完成有界真實瀏覽器三方式／公交核對，將入口／provider／當次時間／請求次數／截圖／結構記於 `specs/003-multimodal-accessibility/verification.md` V03/V04；T002/T003阻塞時明記，歷史或模擬不替代當次UI證據。
+- [X] T020 [US1] 依 `specs/003-multimodal-accessibility/quickstart.md` D01／D02優先、D03補足、D04換乘，完成有界真實瀏覽器三方式／公交核對，將入口／provider／當次時間／請求次數／截圖／結構記於 `specs/003-multimodal-accessibility/verification.md` V03/V04；T002/T003阻塞時明記，歷史或模擬不替代當次UI證據。
 - [X] T021 [US1] 在 `specs/003-multimodal-accessibility/verification.md` 更新FR-001–004、SC-001–002實際範圍、缺失／暫緩原因影響與證據，審源碼文檔／diff後存US1 checkpoint；做不出某方式不刪目標或稱真實三方式全通過。
 
 **Checkpoint**: US1可獨立展示路線價值；初步失效／guard／來源已具備。US2完整生命周期尚未驗部分明示。
@@ -73,7 +73,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] 在 `existing_app/tests/integration/route-state.test.ts` 擴充V05/V06：解析期切點、定位期切mode、正反快切、遲到success／no-route／catch、同screen往返、身份／elder／demo／source／map換代、重試用目前選擇及loading輪椅toggle、A→B→A與同段備選往返不新增路線請求、ID相同但舊版本評估仍丟棄、新查詢不接受舊批次；預期模擬錯誤與真實結果分開；補無Key／無效輸入／定位拒絕／免費門禁未通過的not-sent及null來源，與已發送網絡／provider失敗的sent及live來源斷言。
+- [X] T022 [P] [US2] 在 `existing_app/tests/integration/route-state.test.ts` 擴充V05/V06：解析期切點、定位期切mode、正反快切、遲到success／no-route／catch、同screen往返、身份／elder／demo／source／map換代、重試用目前選擇及loading輪椅toggle、A→B→A與同段備選往返不新增路線請求、ID相同但舊版本評估仍丟棄、新查詢不接受舊批次；預期模擬錯誤與真實結果分開；補無Key／無效輸入／定位拒絕／免費門禁未通過的not-sent及null來源，與已發送網絡／provider失敗的sent及live來源斷言。
 - [X] T023 [P] [US2] 在 `existing_app/tests/integration/route-ui.validation.ts` 建有界瀏覽器控制及重現情境，明示合成供應商／定位錯誤／延遲，只生成當次臨時資料、無常駐夾具；操作有日誌，結束清理timer／腳本／臨時服務／合成帳號，不動真實關聯。
 
 ### Implementation for User Story 2
@@ -102,11 +102,11 @@
 - [X] T031 [P] [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-accessibility.ts` 實作Evidence嵌套驗證及匹配，落实「matchLevel=exact-leg/exact-facility/background/unmatched」「conflictGroup:null或ID」「knownBarrier:null或说明」及usageReview，按入口／leg／選定rideOption匹配；不保存身份，背景不升格整段。
 - [X] T032 [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-accessibility.ts` 實作來源原日期精度／時區與dateAssessment，承接「published／updated／validFrom／validUntil可null」「status=known-date/no-date/expired/conflicting」，查閱非更新日、無統一TTL；較新資料不自動消除事實衝突，過期僅作歷史背景。
 - [X] T033 [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-accessibility.ts` 實作Assistance／Conclusion，承接「required:boolean」「type=staff-portable-ramp/other」「availability=applicable-confirmed/conditional/unknown/unavailable」「bookingStatus=not-booked」「status=confirmed/partial/insufficient」「simulated:boolean」；一般介紹非本次確認，必要段適用且無未解缺口才confirmed，障礙顯著披露，模擬不支持真實confirmed。
-- [ ] T034 [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-preview-data.ts` 加T003許可允許的尖東／科學館／藝術館少量靜態摘要、exact-facility／background綁定、來源／原日期／查閱日／條件／缺口；許可未知不複製，只連來源及不足，1米接駁或一般POI非可達；另用顯式模擬供邊界測試。
+- [X] T034 [US3] 在 `existing_app/client/src/pages/MemoPathPage/route-preview-data.ts` 加T003許可允許的尖東／科學館／藝術館少量靜態摘要、exact-facility／background綁定、來源／原日期／查閱日／條件／缺口；許可未知不複製，只連來源及不足，1米接駁或一般POI非可達；另用顯式模擬供邊界測試。
 - [X] T035 [US3] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 加一般輪椅開關，落实「enabled:boolean，profile固定general-wheelchair」，按requestId、selectionVersion、accessibilityVersion、目前方案／備選及身份／視圖context接受評估，依據更新遞增accessibilityVersion、不重發路線；loading切開關仍接受route後用最新需求，無設備細分或假輪椅專用路由。
 - [X] T036 [US3] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 顯示三類結論、具體設施／段或背景、缺口、日期未知／過期／衝突、障礙與斜板條件；步行街道入口、公交站台車輛接駁、駕車drop-off／parking未知分列；關需求無確認徽章、更換方案無舊結論。
 - [X] T037 [US3] 在 `existing_app/client/src/pages/MemoPathPage/memopath-styles.ts` 加卡片／日期／來源／缺口／障礙／協助窄屏與鍵盤可讀樣式，配合三語文案，狀態不只靠顏色、不暗示即時正常或已預約。
-- [ ] T038 [US3] 運行 `existing_app/tests/integration/route-accessibility.test.ts` 並在瀏覽器驗六類邊界、路線／備選／開關及live路線＋static資料，將查閱、模擬及真實分列於 `specs/003-multimodal-accessibility/verification.md` V07/V08；真實全程數可0，模擬confirmed不補數。
+- [X] T038 [US3] 運行 `existing_app/tests/integration/route-accessibility.test.ts` 並在瀏覽器驗六類邊界、路線／備選／開關及live路線＋static資料，將查閱、模擬及真實分列於 `specs/003-multimodal-accessibility/verification.md` V07/V08；真實全程數可0，模擬confirmed不補數。
 - [X] T039 [US3] 在 `specs/003-multimodal-accessibility/verification.md` 更新FR-008–015、SC-005及SC-006設施資料部分，逐證據核來源／日期／範圍／許可／未知後存US3 checkpoint；無實地／維護任務，真實全程樣本0不阻塞已驗提示。
 
 **Checkpoint**: 局部資料與未知可演示；真實confirmed標準不降低，未有真實樣本如實0。
@@ -126,7 +126,7 @@
 - [X] T041 [P] [US4] 在 `existing_app/client/src/pages/MemoPathPage/route-preview-data.ts` 分開允許的facility-summary、歷史證據／合法historical-replay及simulated，驗sampleId／ImplementationStatus；無完整合法payload只顯歷史文字，依摘要構造必標模擬，無token／Key／私人坐標。
 - [X] T042 [US4] 在 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 加明確來源選擇及分項標籤，回放保留originalQueriedAt、每設施獨立來源、live失敗不自切；未完成／暫緩有reason無success，source切換走invalidate，不由demoMode判真假。
 - [X] T043 [US4] 在 `existing_app/client/src/pages/MemoPathPage/memopath-styles.ts` 完成持續live／static／歷史／simulated及未完成標識，配合三語與可訪問控件；混合結果每項可辨，不只總角標或顏色。
-- [ ] T044 [US4] 用 `existing_app/tests/integration/route-ui.validation.ts` 及允許資料驗V08來源齊全率100%、demo／source上下文、明確切換及失敗非自動成功，於 `specs/003-multimodal-accessibility/verification.md` 記分母／截圖／時點／模擬局限；漏標不通過。
+- [X] T044 [US4] 用 `existing_app/tests/integration/route-ui.validation.ts` 及允許資料驗V08來源齊全率100%、demo／source上下文、明確切換及失敗非自動成功，於 `specs/003-multimodal-accessibility/verification.md` 記分母／截圖／時點／模擬局限；漏標不通過。
 - [X] T045 [US4] 在 `specs/003-multimodal-accessibility/verification.md` 為31行補ImplementationStatus／sourceKinds／verificationStatus／evidenceIds／reason／impact／followupConditions，承接「verificationStatus=passed/failed/not-run/blocked/accepted-deferred」；暫緩非passed，真實全程數可0。
 - [X] T046 [US4] 在 `specs/003-multimodal-accessibility/quickstart.md` 更新實際公共故事／來源操作／限制，於 `specs/003-multimodal-accessibility/verification.md` 記FR-016–020、SC-006–008現狀後存US4 checkpoint；不設部署、實地／全程樣本／維護前置。
 
@@ -140,7 +140,7 @@
 - [X] T048 運行 `existing_app/tests/integration/position-cache.test.ts` 及既有contracts／permissions／auth／demo四套（獨立_test庫，dispatcher不含新route tests），核 `existing_app/server/`／`existing_app/shared/` 無新契約／遷移，脫敏網絡無新周期位置寫入、共享绕过／錄音／手表依賴，於 `specs/003-multimodal-accessibility/verification.md` 記V10及阻塞。
 - [X] T049 在 `existing_app/client/src/pages/MemoPathPage/route-model.ts`、`route-state.ts`、`route-accessibility.ts`、`route-preview-data.ts` 及被改amap／engine完善模塊／公共函數職責、輸入輸出、失敗、副作用／權限／來源／資源文檔，審 `specs/003-multimodal-accessibility/contracts/route-preview.md` 相容與回退；確需不相容／調職先具體方案確認，需遷移先完整回滾，不提前執行。
 - [X] T050 依 `specs/003-multimodal-accessibility/quickstart.md` 明確運行3個新route測試、`npm.cmd run lint`、`npm.cmd run build`，匹配產物做適用UI復檢；新改動／失敗才擴大測試，不無故重複全量，於 `specs/003-multimodal-accessibility/verification.md` 記V11退出碼／產物／範圍。
-- [ ] T051 用 `specs/003-multimodal-accessibility/quickstart.md` D01／D02主故事及D03／D04補充做一次V12，核窄屏／鍵盤、三方式／公交、依據缺口／失敗／明確來源；於 `specs/003-multimodal-accessibility/verification.md` 記步驟與暫緩影響，真實樣本0可接受、三個非前置計數0，無實地／維護／真救援。
+- [X] T051 用 `specs/003-multimodal-accessibility/quickstart.md` D01／D02主故事及D03／D04補充做一次V12，核窄屏／鍵盤、三方式／公交、依據缺口／失敗／明確來源；於 `specs/003-multimodal-accessibility/verification.md` 記步驟與暫緩影響，真實樣本0可接受、三個非前置計數0，無實地／維護／真救援。
 - [X] T052 在 `specs/003-multimodal-accessibility/verification.md` 完成FR23＋SC8、V01–V12證據對照、七原則／三基線、許可及無DB／職責變更核查，更新 `existing_app/README.md` 與 `specs/003-multimodal-accessibility/quickstart.md` 現行能力限制，保留001／002歷史與Key暫緩，未驗／暫緩非通過。
 - [X] T053 清理 `existing_app/tests/integration/route-ui.validation.ts` 本次生成的合成資料／帳號／臨時監聽／控制檔（先核歸屬，不動用户3000／開發DB），復核 `specs/003-multimodal-accessibility/tasks.md` 只勾實際完成，審diff／links／狀態後存最終checkpoint；未完成保留未勾與暫緩說明，不推送／部署／合併。
 
@@ -243,4 +243,6 @@ US1→US2→US3→US4各適用測試／UI及證據後checkpoint；暫緩有原�
 
 ## 本次未勾項及可完成範圍
 
-T002/T020/T051：私有權益未獨立核驗，但使用者新指示已直接授權現有Key；E06完成D03三方式HTTP，真實瀏覽器／主公共點故事仍未執行。T034：許可／適用入口資料未明，僅靜態來源連結。T022/T028/T038/T040/T044/T047：純模型及52項受控UI子項已驗，未涵蓋全部真實帳號／live＋static／舊三導航四搜尋UI，保持未勾。T048：cache通過，原服務恢復後四套DB回歸全部通過，見E07。其餘勾項以verification E01–E05為範圍；T041完成的是合法缺料降級／原創模擬與連結，未交付回放或官方內容。T053於最終diff／links、清理與hook完成後核對。
+49/53已完成。本輪T020/T022/T034/T038/T044/T051以E08/E09完成：D01保留公交no-route、D03補真實三方式、D04換乘；許可未知按T034明定降級，只連官方來源、不複製摘要。純測試25及受控UI67通過。
+
+T002：私有免費/付費設定仍未核驗，使用者已明確授權現有Key，本輪有界調用不因此重阻。T028/T040：完整context純/受控UI、真實demo登入登出與前端身份來源分離有證據；現有demo為家屬角色，未擴大權限，真實長者身份路線切換仍缺。T047：主頁步行/返家步行/三方式入口及四搜尋受控回歸已補，三舊入口全部真實身份/定位生命周期未驗。未執行部分不算passed；原資料庫阻塞已解除、E07四套通過。

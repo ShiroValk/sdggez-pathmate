@@ -36,3 +36,15 @@ test('source and attempts retain distinctions; replay requires original timestam
  assert.equal(validProvenance(provenance),true);assert.equal(validProvenance({...provenance,kind:'static',subtype:'historical-replay'}),false);
  assert.equal(validAttempt({status:'not-sent',sentAt:'2026-10-11'}),false);assert.equal(validAttempt({status:'sent',sentAt:null}),false);
 });
+
+test('empty railway placeholders do not invent a ride or hide a bus/metro segment',()=>{
+ const walk={distance:'1',duration:'1',steps:[{instruction:'Synthetic connector',polyline:'0,0;1,1'}]};
+ const railway={via_stops:[],alters:[],spaces:[]};
+ const line={name:'Synthetic metro',type:'地铁线路',distance:'10',duration:'20',departure_stop:{name:'A'},arrival_stop:{name:'B'},polyline:'0,0;1,1'};
+ const o=normalizeRoute({status:'1',route:{transits:[{distance:'12',duration:'30',segments:[{walking:walk,bus:{buslines:[line]},railway,taxi:[]},{walking:walk,bus:{buslines:[]},railway,taxi:[]}]}]}},{...query,mode:'transit'},provenance);
+ assert.equal(o.status,'success');if(o.status!=='success')return;
+ assert.deepEqual(o.plans[0].legs.map(l=>l.kind),['walk','ride','walk']);
+ assert.deepEqual(o.plans[0].legs.filter(l=>l.kind==='walk').map(l=>l.role),['access','egress']);
+ assert.equal(o.plans[0].transferCount,0);assert.equal(o.plans[0].legs[1].alternatives[0].name,'Synthetic metro');
+ assert.deepEqual(o.plans[0].completeness.unsupportedParts,[]);
+});

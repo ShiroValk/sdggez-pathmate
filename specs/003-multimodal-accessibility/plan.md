@@ -22,7 +22,7 @@
 
 **Storage**: 路線選擇／結果僅頁面記憶體；少量已審閱設施摘要／公共回放為版本化前端靜態檔，附來源與使用條件。私人坐標／token不保存於回放或證據。不新增localStorage鍵、DB表或遷移。
 
-**Testing**: Node `node:test`＋既有tsx執行純正規化、狀態／日期／來源測試；瀏覽器檢查真實高德與明示故障／延遲控制；既有integration dispatcher驗證受支持契約與身份。具體命令與證據要求見quickstart，新增測試檔目前未建立。
+**Testing**: Node `node:test`＋既有tsx執行純正規化、狀態／日期／來源測試；瀏覽器檢查真實高德與明示故障／延遲控制；既有integration dispatcher驗證受支持契約與身份。具體命令與證據要求見quickstart，新增測試檔已建立，E09直接運行25純斷言及67受控UI。
 
 **Target Platform**: Windows本機、桌面與窄屏瀏覽器；既有5173开发／3000构建後入口。香港時間作示範與記錄時區。內置瀏覽器定位拒絕可改明確公共起點，不模擬成功定位。
 
@@ -78,22 +78,22 @@ existing_app/
 │   ├── memopath-engine.ts          # 既有三導航入口；增方式／公共起點／提示UI
 │   ├── position-cache.ts           # 保留既有定位政策
 │   ├── route-model.ts             # 新增共同型別、正規化／输入驗證
-│   ├── route-state.ts             # 擬新增純狀態／請求匹配策略
-│   ├── route-accessibility.ts     # 擬新增局部證據與保守結論
+│   ├── route-state.ts             # 已新增純狀態／請求匹配策略
+│   ├── route-accessibility.ts     # 已新增局部證據與保守結論
 │   ├── route-preview.ts           # engine所擁有的DOM控件與生命周期，無新服務
-│   └── route-preview-data.ts      # 擬新增已審閱靜態／回放及顯式模擬
+│   └── route-preview-data.ts      # 已新增已審閱靜態／回放及顯式模擬
 ├── tests/integration/
-│   ├── route-model.test.ts        # 擬新增，不需DB
-│   ├── route-state.test.ts        # 擬新增，不需DB
-│   ├── route-accessibility.test.ts # 擬新增，不需DB
-│   ├── route-ui.validation.ts     # 擬新增有界測試控制，非正式服務
+│   ├── route-model.test.ts        # 已新增，不需DB
+│   ├── route-state.test.ts        # 已新增，不需DB
+│   ├── route-accessibility.test.ts # 已新增，不需DB
+│   ├── route-ui.validation.ts     # 已新增有界測試控制，非正式服務
 │   ├── position-cache.test.ts     # 既有
 │   ├── contracts.test.ts          # 既有
 │   └── run.ts                    # 保留9套件dispatcher
 └── server/、shared/               # 公開契約與資料歸屬不改
 ```
 
-**Structure Decision**: 純正規化／狀態／證據分成可直接測試的同頁模塊；transport仍由memopath-amap負責，engine整合畫面與生命周期，不導入新框架或路由服務。擬新增檔名供tasks定位，實作依現有CSS組織增樣式與三語文字，不重寫MemoPath架構。
+**Structure Decision**: 純正規化／狀態／證據分成可直接測試的同頁模塊；transport仍由memopath-amap負責，engine整合畫面與生命周期，不導入新框架或路由服務。已新增檔名供tasks定位，實作依現有CSS組織增樣式與三語文字，不重寫MemoPath架構。
 
 測試控制只保留可審閱的執行代碼；合成資料在測試中生成、结束清理，不保留持續運行夾具、測試帳號、空證據檔或一次性演示workflow。產品所需且已標示來源的靜態／模擬故事資料属于用户授权范围，不以其代替真实验收。
 
@@ -114,3 +114,5 @@ existing_app/
 ## Complexity Tracking
 
 沒有章程違反或需要豁免的複雜度。額外模塊僅隔離可測試資料政策，沒有新增服務、資料庫、SDK或依賴。
+
+本輪續作（E08/E09）：真實D01步行/駕車、公交no-route；D03三方式與D04換乘UI已驗，25純測試/67受控UI及lint/build通過。主頁搜尋/返家保留步行；返家進可滾動預覽，不以地圖或定位成功作前置。真實長者身份的全部舊入口切換仍待驗，現有demo家屬角色及權限保持；私有高德權益、官方正文許可與歷史payload仍有限制。詳細以最新verification為準。

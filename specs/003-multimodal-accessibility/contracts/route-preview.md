@@ -16,7 +16,7 @@
 
 ## C02 — 新增內部queryRoute介面
 
-拟在既有client adapter新增`queryRoute(query: RouteQuery): Promise<RouteQueryOutcome>`，模式walking/driving/transit。只返回当前请求快照对应的数据，不操作engine DOM、不写业务DB、不改变身份。transport请求失败、格式失败、no-route分辨依data-model。engine决定是否接受请求context与显示，不让adapter猜用户已切換。
+已在既有client adapter新增`queryRoute(query: RouteQuery): Promise<RouteQueryOutcome>`，模式walking/driving/transit。只返回当前请求快照对应的数据，不操作engine DOM、不写业务DB、不改变身份。transport请求失败、格式失败、no-route分辨依data-model。engine决定是否接受请求context与显示，不让adapter猜用户已切換。
 
 live模式使用既有AMAP_KEY注入与v3來源：walking/driving保持路径，transit为direction/transit/integrated、city/cityd=香港、extensions=all；有效origin/destination经既有URLSearchParams编码。按官方callback规则用output=JSON。不在文檔或日志输出真实Key／完整查询URL。错误码只映射已验证的官方值，未知保持provider/unknown。
 

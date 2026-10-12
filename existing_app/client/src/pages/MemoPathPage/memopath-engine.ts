@@ -389,6 +389,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   let elderGeneration = 0;
   let viewGeneration = 0;
   let routeSequence = 0;
+  // Entry default stays separate from the user's current preview selection.
+  let navigationRouteMode: RouteMode = 'driving';
   let routePreview: ReturnType<typeof mountRoutePreview> | null = null;
   let routePreviewRoot: HTMLElement | null = null;
   const suggestionSequences = { home: 0, map: 0, destination: 0 };
@@ -500,6 +502,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   /** Remove all previous identity data and drafts; pending revocation is held
    * separately in API module memory for an explicit retry, never localStorage. */
   function clearIdentityData(): void {
+    navigationRouteMode = 'driving';
     routePreview?.dispose(); routePreview = null; routePreviewRoot = null; routeSequence += 1;
     identityGeneration += 1;
     authenticatedRole = null;
@@ -1755,6 +1758,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     );
     if (!place) return;
     if (place.lng !== 0 || place.lat !== 0) {
+      navigationRouteMode = 'driving';
       state.navDestination = place.label;
       state.navPos = { lng: place.lng, lat: place.lat };
       toast(`${t('planningRoute')} ${place.label}`);
@@ -1776,6 +1780,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       return;
     }
     state.homeSearchText = '';
+    navigationRouteMode = 'walking';
     state.homeTips = [];
     renderSuggestPanel(app.querySelector('[data-homesuggest]'), [], 'homepick');
     if (tip.location) {
@@ -1786,6 +1791,8 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       return;
     }
     await navigateToDestination(tip.name);
+    navigationRouteMode = 'walking';
+    ensureRoutePreview()?.setDestinationDraft(tip.name,'walking');
   }
 
   function cleanHomeLabel(label: string): string {
@@ -1884,11 +1891,12 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   async function autoPlanTrip(forceFreshPosition = false): Promise<void> {
     const preview = ensureRoutePreview();
     if (!preview) return;
+    // Explicit retry uses the current endpoints/mode/source, not entry defaults.
+    if (forceFreshPosition) { await preview.run(true); return; }
     preview.clear();
     const pos = validRoutePoint(state.navPos);
-    if (!pos) { preview.setDestinationDraft(state.navDestination, 'driving'); return; }
-    preview.setDestination({id:`destination:${state.navDestination}`,label:state.navDestination,point:pos,selectionOrigin:'public-search'},'driving');
-    if (forceFreshPosition) await preview.run(true);
+    if (!pos) { preview.setDestinationDraft(state.navDestination, navigationRouteMode); return; }
+    preview.setDestination({id:`destination:${state.navDestination}`,label:state.navDestination,point:pos,selectionOrigin:'public-search'},navigationRouteMode);
   }
 
   async function mountScreenMaps(): Promise<void> {
@@ -2041,6 +2049,10 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     toast('正在規劃返屋企嘅路線…');
     // A saved text label does not uniquely identify an entrance. The supported
     // geofence API stays unchanged; ask for an explicit point in the shared UI.
+    // Use the scrollable preview so unavailable SDK/GPS cannot hide the inputs
+    // behind the legacy full-screen map. This does not start a route request.
+    state.navDestination=homeLabel; state.navPos=null; navigationRouteMode='walking';
+    nav('tripMap');
     ensureRoutePreview()?.setDestinationDraft(homeLabel,'walking');
   }
 
@@ -2057,6 +2069,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
   async function navigateToDestination(destination: string): Promise<void> {
     const label: string = destination.trim();
     if (label.length === 0) return;
+    navigationRouteMode = 'driving';
     state.navDestination = label;
     state.navPos = null;
     toast(`${t('planningRoute')} ${label}`);

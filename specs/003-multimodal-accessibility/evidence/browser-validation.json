@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-11T11:43:28.433Z",
+  "date": "2026-10-11T12:14:02.483Z",
   "sourceLabels": {
     "displayedItems": 6,
     "labelledItems": 6,
@@ -10,10 +10,10 @@
     "x": 12,
     "y": 60,
     "width": 366,
-    "height": 3526.84375,
+    "height": 3594.84375,
     "top": 60,
     "right": 378,
-    "bottom": 3586.84375,
+    "bottom": 3654.84375,
     "left": 12
   },
   "kind": "controlled-browser-simulation",
@@ -199,6 +199,18 @@
       "passed": true
     },
     {
+      "name": "legacy home search displays controlled JSON callback candidate",
+      "passed": true
+    },
+    {
+      "name": "legacy home search keeps walking default and explicit zero destination",
+      "passed": true
+    },
+    {
+      "name": "legacy home navigation offers scrollable walking inputs without map/GPS prerequisite",
+      "passed": true
+    },
+    {
       "name": "real engine exposes three-mode entry without requiring GPS",
       "passed": true
     },
@@ -208,6 +220,54 @@
     },
     {
       "name": "engine nav/back clears preview and old outcome",
+      "passed": true
+    },
+    {
+      "name": "homeSearch search success",
+      "passed": true
+    },
+    {
+      "name": "homeSearch failure retains input and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "homeSearch retry succeeds and late candidate is isolated",
+      "passed": true
+    },
+    {
+      "name": "destination search success",
+      "passed": true
+    },
+    {
+      "name": "destination failure retains input and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "destination retry succeeds and late candidate is isolated",
+      "passed": true
+    },
+    {
+      "name": "placeSearch search success",
+      "passed": true
+    },
+    {
+      "name": "placeSearch failure retains input and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "placeSearch retry succeeds and late candidate is isolated",
+      "passed": true
+    },
+    {
+      "name": "route public search uses actual controlled JSON callback adapter",
+      "passed": true
+    },
+    {
+      "name": "route public search error retains name and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "route public search retry and abort isolate late callback",
       "passed": true
     },
     {

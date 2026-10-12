@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { initialRouteState, invalidateRoute, beginRoute, matchesRequest, setWheelchair, acceptRoute, selectPlan, selectRideOption, assessmentContext, matchesAssessment } from '../../client/src/pages/MemoPathPage/route-state';
 import { routeError, validQuery, point, metric } from '../../client/src/pages/MemoPathPage/route-model';
 import type { RouteSelection, RoutePlan, Provenance } from '../../client/src/pages/MemoPathPage/route-model';
+import { simulationRoute } from '../../client/src/pages/MemoPathPage/route-preview-data';
 const endpoint = { id: 'public', label: 'Public', point: { lng: 0, lat: 0 }, selectionOrigin: 'explicit-public-sample' as const };
 const selection: RouteSelection = { origin: endpoint, destination: endpoint, mode: 'transit', sourceMode: 'simulation', sampleId: 'test', wheelchair: {enabled:true,profile:'general-wheelchair'}, selectedPlanId:null, selectedRideOptionIds:{}, selectionVersion:0,accessibilityVersion:0 };
 const epoch = { identityGeneration:1,elderGeneration:1,viewGeneration:1,mapGeneration:1,screen:'tripMap',viewRole:'elder',elderId:'',demoMode:true };
@@ -45,4 +46,42 @@ test('current request never accepts mismatched source or endpoints',()=>{
  assert.equal(acceptRoute(s,c,{...outcome,provenance:{...provenance,kind:'live'}}),false);
  const foreign=structuredClone(outcome);foreign.plans[0].destination.point.lng=9;assert.equal(acceptRoute(s,c,foreign),false);
  assert.equal(acceptRoute(s,c,outcome),true);
+});
+
+test('every query/context field rejects a foreign reply without changing current state',()=>{
+ const {s,c}=setup();const before=JSON.stringify(s);
+ const contexts=[{...c,screen:'home'},{...c,viewRole:'family'},{...c,elderId:'another'},
+  {...c,query:{...c.query,sampleId:'other'}},{...c,query:{...c.query,mode:'walking' as const}},
+  {...c,query:{...c.query,origin:{...endpoint,point:{lng:1,lat:0}}}},
+  {...c,query:{...c.query,destination:{...endpoint,point:{lng:0,lat:1}}}}];
+ for(const foreign of contexts){assert.equal(acceptRoute(s,foreign,routeError({...foreign.query,requestId:foreign.requestId},'transport','Controlled late failure')),false);assert.equal(JSON.stringify(s),before);}
+});
+
+test('a new query rejects old success, no-route and failure; retry uses current inputs',()=>{
+ const {s,c}=setup();const old=simulationRoute({...c.query,requestId:c.requestId},'partial');
+ invalidateRoute(s);const next=beginRoute(s,{...selection,mode:'walking',destination:{...endpoint,label:'Changed',point:{lng:2,lat:1}}},epoch);
+ const snapshot=JSON.stringify(s);
+ for(const outcome of [old,{status:'no-route' as const,provenance,requestedSourceMode:'simulation' as const,requestAttempt:{status:'not-sent' as const,sentAt:null}},routeError({...c.query,requestId:c.requestId},'timeout','Controlled')]){
+  assert.equal(acceptRoute(s,c,outcome),false);assert.equal(JSON.stringify(s),snapshot);
+ }
+ assert.equal(next.query.mode,'walking');assert.equal(next.query.destination.point.lng,2);
+ assert.equal(acceptRoute(s,next,simulationRoute({...next.query,requestId:next.requestId},'no-route')),true);
+ assert.equal(s.phase,'no-route');assert.deepEqual(s.plans,[]);assert.equal(s.selection?.selectedPlanId,null);
+});
+
+test('same-leg option roundtrip preserves batch and rejects old assessment',()=>{
+ const {s,c}=setup();const outcome=simulationRoute({...c.query,requestId:c.requestId},'partial');assert.equal(acceptRoute(s,c,outcome),true);
+ const leg=s.plans[0].legs.find(l=>l.alternatives.length>1)!;const before=JSON.stringify(s.plans);const first=assessmentContext(s)!;
+ for(const option of [leg.alternatives[1],leg.alternatives[0]])assert.equal(selectRideOption(s,leg.id,option.id),true);
+ assert.equal(s.requestId,c.requestId);assert.equal(JSON.stringify(s.plans),before);assert.equal(matchesAssessment(s,first),false);
+ assert.equal(matchesAssessment(s,assessmentContext(s)!),true);
+});
+
+test('sent live failure retains attempt while malformed attempt is rejected',()=>{
+ const s=initialRouteState();invalidateRoute(s);const c=beginRoute(s,{...selection,sourceMode:'live',sampleId:null},epoch);
+ const now=new Date().toISOString();const live:Provenance={...provenance,kind:'live'};
+ const failure=routeError({...c.query,requestId:c.requestId},'provider','Controlled rejection',live,now);
+ assert.equal(acceptRoute(s,c,{...failure,requestAttempt:{status:'sent',sentAt:null}}),false);
+ assert.equal(acceptRoute(s,c,failure),true);assert.equal(s.phase,'error');assert.deepEqual(s.plans,[]);
+ assert.equal(s.selection?.sourceMode,'live');assert.equal(s.outcome?.provenance?.kind,'live');
 });
