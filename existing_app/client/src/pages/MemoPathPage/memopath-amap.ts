@@ -2,7 +2,7 @@ import { logger } from '@/lib/logger';
 import { isPositionCacheFresh, POSITION_CACHE_TTL_MS } from './position-cache';
 import { normalizeRoute, validQuery, routeError, point as routePoint } from './route-model';
 import type { RouteQuery, RouteQueryOutcome, ErrorCategory, Provenance, PolylineFragment } from './route-model';
-import { ROUTE_LIVE_REVIEW, simulationRoute, SIMULATION_CASES, type SimulationCase } from './route-preview-data';
+import { ROUTE_LIVE_REVIEW } from './route-preview-data';
 
 const AMAP_KEY = (import.meta.env.VITE_AMAP_KEY ?? '').trim();
 const REST_BASE = 'https://restapi.amap.com/v3';
@@ -235,11 +235,7 @@ async function ampRest<T = AmpRestEnvelope>(path: string, params: Record<string,
  * silently substitutes simulation. Account review blocks only new live route calls. */
 export async function queryRoute(query: RouteQuery, options: { signal?: AbortSignal } = {}): Promise<RouteQueryOutcome> {
   if (!validQuery(query)) return routeError(query, 'invalid-input', '請明確選定有效起終點與方式');
-  if (query.sourceMode === 'simulation') {
-    if (!SIMULATION_CASES.includes(query.sampleId as SimulationCase)) return routeError(query, 'invalid-input', '未知模擬情境');
-    return simulationRoute(query, query.sampleId as SimulationCase);
-  }
-  if (query.sourceMode === 'replay') return {status:'not-implemented',reason:'沒有合法完整歷史payload；001文字證據不能冒充可執行回放',mode:query.mode,sourceMode:'replay',requestedSourceMode:'replay',provenance:null,requestAttempt:{status:'not-sent',sentAt:null}};
+  if (query.sourceMode !== 'live' || query.sampleId !== null) return routeError(query, 'invalid-input', '產品導航只支援當次真實查詢');
   if (!AMAP_KEY) return routeError(query, 'config', '尚未配置高德Key');
   if (!ROUTE_LIVE_REVIEW.allowed) return routeError(query, 'config', ROUTE_LIVE_REVIEW.reason);
   let sentAt: string | null = null;

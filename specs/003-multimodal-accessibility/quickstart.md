@@ -16,7 +16,7 @@ npm.cmd run dev
 ## 普通導航故事
 
 1. 長者首頁點常用公共點「聖德肋撒醫院」，直接帶入同一導航頁目的地，不另進新功能入口。
-2. 起點選「香港理工大學」，不用輸入坐標或允許GPS。點規劃，先看步行，再切駕車、公交；各方式一次有界真實查詢。
+2. 起點已帶入「香港理工大學」，不用輸入坐標或允許GPS。直接選「步行」會發起目前端點的真實查詢，再切駕車、公交；各方式一次有界真實查詢。地點／行程原有駕車、首頁搜尋／返家原有步行意圖沿用。
 3. 核底圖、當次路線、易讀時間／距離与指引；展開詳細步驟，公交檢查接駁/站點/線路/換乘。多方案／同段備選切換不重查。
 4. 用輪椅需求看簡短不足；已知障礙/必要協助直接顯示，来源與缺口展開。現在沒有全程真實依據不能保證可達。
 5. 必要換乘参照改終點「香港國際機場T1出發」，公交一次；当次無方案如實記錄，不填假路线。
@@ -40,6 +40,10 @@ npm.cmd run test:integration -- --suite contracts
 npm.cmd run test:integration -- --suite permissions
 npm.cmd run test:integration -- --suite auth
 npm.cmd run test:integration -- --suite demo
+npm.cmd run test:integration -- --suite persistence
+node --import tsx tests/integration/route-identity.fixture.ts --smoke
 ```
 
 合成故障／日期／衝突／障礙／協助只在測試；不增加用戶情境選單。R2輸出另命名，E01–E10不覆寫。紀錄commit、公共點、操作、真實返回／地图及指引、截圖、请求類別與次數、退出碼、存儲/清理證據。無Key/完整敏感URL/token/私人定位入Git。私有免費權益T002仍待資料；原有Key使用授權有效，不自動付費、新service或无限重試。實地、全程真實confirmed、維護不是前置。
+
+業務套件必須按以上順序串行運行，不能用多檔 `node --test` 並行啟動共享測試端口。完整瀏覽器fixture（不加`--smoke`）最多12分鐘，只啟動3104/3105，隨機自建family/elder/verified-demo帳號寫到忽略的 `.local-validation/r2-route-identity-state.json`；合成密碼由fixture定義。3105的CSP刻意阻provider，不代表地圖／路線端到端成功。核demo RAM與普通設定保存後，把 `.local-validation/r2-route-identity-control.json` 寫為 `{"finish":true}`，finally清自建帳號／服務；不得放寬_test保護或改真實照護資料。需要真实路线用普通应用入口5173（dev）或3000（已有build/start），不經故障fixture。

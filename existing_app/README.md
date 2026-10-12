@@ -154,8 +154,8 @@ verify-baseline核对归档哈希与恢复receipt，在恢复库只新增并清�
 
 ## 003 多方式與無障礙提示
 
-長者首頁有三方式预覽入口；公共點不需要定位前置，路線／輪椅評估使用獨立請求與選擇版本，離頁／身份／長者切換清除頁面結果。使用者已明確授權直接使用現有高德Key，真實路線與公共搜尋已放行（免費餘額／付費設定未獨立核驗）；明確選模擬才提供原創受控示意。設施僅官方靜態連結，歷史回放沒有合法完整payload，明示未完成。圖為分段幾何示意，無底圖／全程可達主張。無新DB、依賴或公開API變更。
+003 R2沿用首頁搜尋、常用地點、行程和返家的同一導航頁：香港公共預設／名稱明選／定位→步行、駕車、公交→現有高德真實底圖、路線與指引。時間／距離易讀，詳細步驟與來源按需展開；產品無來源選擇、模擬情境、歷史回放、坐標輸入或獨立控制台。輪椅提示按實際依據評估，目前資料不足，不能保證全程可達。
 
-運行與限制見[003 quickstart](../specs/003-multimodal-accessibility/quickstart.md)及[31項交付證據](../specs/003-multimodal-accessibility/verification.md)。本次20項純邏輯＋52項受控UI通過，lint/build通過；contracts／permissions／auth／demo首次因_test資料庫不可用而受阻；原Docker／DB恢復後四套已全部通過（E07）。不得以模擬取代當次真實查詢或正式後端驗收。
+frontend演示及真實認證isDemo都只把業務修改保留本頁RAM，跨頁／切長者可保留，刷新重建公共預設；只提示「演示資料不保存」。普通狀態依原API保存，不讓用戶配置存儲。沒有改DB、公開契約、權限、服務責任或新增依賴。真實服務失敗可重試／改地點，不回假路線。
 
-003續作：E08真實D01兩方式及公交no-route、D03三方式、D04公交換乘；E10補實際認證長者來源與離頁／登出／演示切換，受控UI81/81（外部provider與GPS不調用）。純測試25/25及lint/build通過。主頁搜尋與返家保留步行，返家使用可滾動公共點規劃。未改API/權限/DB；52/53任務完成，私有高德權益核查仍待使用者資料。各項當次與受控證據見verification。
+R2純測試25/25、受控UI74/74、lint/build及contracts／permissions／auth／demo／persistence五套順序回歸通過。普通首頁理大→醫院當次真實三方式與地圖／指引、機場公交2次換乘、名稱搜索及390px畫面已核；verified demo業務寫请求0／刷新恢復，普通設定UI保存與SQL重讀通過。設施僅官方靜態連結，真實全程confirmed=0；私有高德額度／付費設定仍未獨立核驗，沒有充值或新服務。完整範圍、失敗記錄與R1歷史見[31項交付證據](../specs/003-multimodal-accessibility/verification.md)，手動驗收見[quickstart](../specs/003-multimodal-accessibility/quickstart.md)，程式职责見[client模組說明](client/src/pages/MemoPathPage/README.md)。

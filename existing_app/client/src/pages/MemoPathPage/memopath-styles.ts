@@ -1,6 +1,5 @@
 export const MEMOPATH_CSS = `
 .memopath-stage .route-preview-page{padding:18px 16px 40px;overflow-y:auto}
-.memopath-stage .route-preview-entry{display:block;width:100%;padding:12px;margin:8px 0;background:var(--gold);border-radius:12px;font-weight:700}
 .memopath-stage .route-preview{background:var(--cream);padding:12px;color:var(--ink);font-size:16px;overflow-wrap:anywhere}
 .memopath-stage .route-preview h2{font-size:21px}.memopath-stage .route-preview h3{font-size:18px}
 .memopath-stage .route-controls{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0}
@@ -14,6 +13,22 @@ export const MEMOPATH_CSS = `
 .memopath-stage .route-preview svg{width:100%;height:150px;background:#f4f4ee;border:1px solid var(--line)}
 .memopath-stage .route-preview ol,.memopath-stage .route-preview ul{padding-left:22px}.memopath-stage .route-preview li{margin:8px 0}
 .memopath-stage .route-preview a{color:#255a8a;text-decoration:underline}
+.memopath-stage .route-mode-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.memopath-stage .route-mode-buttons button{font-size:18px;font-weight:700;border-radius:12px;min-height:48px}
+.memopath-stage .route-mode-buttons button[aria-pressed=true]{background:#356047;color:white}
+.memopath-stage .route-place{margin:8px 0}.memopath-stage .route-place-actions{display:flex;align-items:center;gap:8px}
+.memopath-stage .route-place-actions select{flex:1;min-width:0;margin:0}.memopath-stage .route-place-actions button{flex:none;border-radius:8px;padding:6px}
+.memopath-stage .route-selected{font-size:14px;margin:4px 0;color:#425737}
+.memopath-stage .route-plan-button{width:100%;font-size:19px;font-weight:700;border-radius:12px}
+.memopath-stage .route-wheelchair{display:flex;align-items:center;gap:10px;min-height:44px;font-size:16px}
+.memopath-stage .route-map{height:260px;width:100%;border-radius:12px;overflow:hidden;background:#e9e5dc}
+.memopath-stage .route-summary{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:18px}.memopath-stage .route-summary strong{font-size:26px}
+.memopath-stage .route-preview summary{min-height:44px;padding:12px 2px;font-weight:600;cursor:pointer}
+.memopath-stage .route-obstacle{border-left:4px solid #a53c2d;padding:8px;background:#fff3ee}
+.memopath-stage [data-route-candidates] button{display:block;width:100%;text-align:left;margin:6px 0;border-radius:10px}
+.memopath-stage [data-route-candidates] small{display:block;font-size:14px;padding-top:4px}
+.memopath-stage .demo-memory-hint{margin:0;padding:5px;font-size:14px;color:#504335;text-decoration:none;cursor:default}
+.memopath-stage .demo-memory-hint + .screen{height:calc(100% - 30px)}
 .memopath-stage .amp-route-info.route-preview{position:relative;inset:auto;max-height:65vh;overflow-y:auto;margin:8px;z-index:4;font-size:16px}
 .memopath-stage{--cream:#fbf3e7;--paper:#fff;--ink:#2c2119;--muted:#a79f96;--line:#b5aa9d;--green:#86a94e;--green-dark:#617f2f;--blue:#568dbb;--gold:#f2d392;--soft:#f4ead9;--red:#c45545;--shadow:0 3px 5px #0003;--radius:18px}
 .memopath-stage *,.memopath-stage *::before,.memopath-stage *::after{box-sizing:border-box}

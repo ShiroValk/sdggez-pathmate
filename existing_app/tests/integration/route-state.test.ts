@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { initialRouteState, invalidateRoute, beginRoute, matchesRequest, setWheelchair, acceptRoute, selectPlan, selectRideOption, assessmentContext, matchesAssessment } from '../../client/src/pages/MemoPathPage/route-state';
 import { routeError, validQuery, point, metric } from '../../client/src/pages/MemoPathPage/route-model';
 import type { RouteSelection, RoutePlan, Provenance } from '../../client/src/pages/MemoPathPage/route-model';
-import { simulationRoute } from '../../client/src/pages/MemoPathPage/route-preview-data';
+import { simulationRoute } from './route-test-data';
 const endpoint = { id: 'public', label: 'Public', point: { lng: 0, lat: 0 }, selectionOrigin: 'explicit-public-sample' as const };
 const selection: RouteSelection = { origin: endpoint, destination: endpoint, mode: 'transit', sourceMode: 'simulation', sampleId: 'test', wheelchair: {enabled:true,profile:'general-wheelchair'}, selectedPlanId:null, selectedRideOptionIds:{}, selectionVersion:0,accessibilityVersion:0 };
 const epoch = { identityGeneration:1,elderGeneration:1,viewGeneration:1,mapGeneration:1,screen:'tripMap',viewRole:'elder',elderId:'',demoMode:true };

@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-12T12:56:29.524Z",
+  "kind": "actual-fixture-startup-cleanup-smoke",
+  "ordinarySaveReadback": true,
+  "elderWriteDenied": true,
+  "ordinaryClientSettingReadback": false,
+  "demoPersistedTrips": null,
+  "remainingAccounts": 0,
+  "servicesStopped": [
+    3104,
+    3105
+  ],
+  "providerTraffic": "CSP explicitly blocked",
+  "counts": {},
+  "developmentDatabaseChanged": false,
+  "newMigrations": 0
+}

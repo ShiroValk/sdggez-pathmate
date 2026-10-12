@@ -255,35 +255,35 @@ R1完成52/53只是歷史；本批14項T054–T067需獨立驗證。無新功能
 
 ### Setup / 一致性
 
-- [ ] T054 在 `specs/003-multimodal-accessibility/spec.md`、`plan.md`、`data-model.md`、`contracts/route-preview.md` 與本任務表完成只讀一致性分析，核23FR/8SC覆蓋、歷史隔離、服務/API/模式識別及rollback，記分析結果於本次交付證據。
-- [ ] T055 在 `existing_app/tests/integration/route-test-data.ts` 搬入原合成route/evidence，改相應純測試import與 `route-ui.validation.ts` 測試預期；產品 `route-preview-data.ts` 不保留合成情境，R2輸出不覆寫E01–E10。
+- [X] T054 在 `specs/003-multimodal-accessibility/spec.md`、`plan.md`、`data-model.md`、`contracts/route-preview.md` 與本任務表完成只讀一致性分析，核23FR/8SC覆蓋、歷史隔離、服務/API/模式識別及rollback，記分析結果於本次交付證據。
+- [X] T055 在 `existing_app/tests/integration/route-test-data.ts` 搬入原合成route/evidence，改相應純測試import與 `route-ui.validation.ts` 測試預期；產品 `route-preview-data.ts` 不保留合成情境，R2輸出不覆寫E01–E10。
 
 ### US1：普通入口 → 地點 → 方式 → 真實地圖／指引
 
-- [ ] T056 [US1] 修 `existing_app/client/src/pages/MemoPathPage/route-preview.ts` 與 `route-preview-data.ts`：香港公共preset、名稱搜索明選/定位Endpoint、無手填coords/source/scenario/replay，三方式44px按鈕、分鐘／小時和米／公里、details步驟與來源。
-- [ ] T057 [US1] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 與 `memopath-styles.ts`：同tripMap掛現有真實AMap底圖、分段線與起終marker、fitView，SDK遲到隔離、map錯誤單獨重試、離頁destroy，無GPS前置或SVG假底圖。
-- [ ] T058 [US1] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：移除專用route-preview-entry，首頁搜索/常用點/行程/返家直接同頁带目的地；已知位置及唯一精確preset/places匹配直接帶入，其他名称明選不猜第一候選。
+- [X] T056 [US1] 修 `existing_app/client/src/pages/MemoPathPage/route-preview.ts` 與 `route-preview-data.ts`：香港公共preset、名稱搜索明選/定位Endpoint、無手填coords/source/scenario/replay，三方式44px按鈕、分鐘／小時和米／公里、details步驟與來源。
+- [X] T057 [US1] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts` 與 `memopath-styles.ts`：同tripMap掛現有真實AMap底圖、分段線與起終marker、fitView，SDK遲到隔離、map錯誤單獨重試、離頁destroy，無GPS前置或SVG假底圖。
+- [X] T058 [US1] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：移除專用route-preview-entry，首頁搜索/常用點/行程/返家直接同頁带目的地；已知位置及唯一精確preset/places匹配直接帶入，其他名称明選不猜第一候選。
 
 ### US2：Live失敗與生命期
 
-- [ ] T059 [US2] 修 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts`／`route-preview.ts`：產品query固定live、拒非live；前置/已發送失败分辨、保留地点與方式、明確重試/改點；新搜尋/GPS/query及context清舊結果，map/request序列分開，保留方案/備選增量0與legacy相容測試。
+- [X] T059 [US2] 修 `existing_app/client/src/pages/MemoPathPage/memopath-amap.ts`／`route-preview.ts`：產品query固定live、拒非live；前置/已發送失败分辨、保留地点與方式、明確重試/改點；新搜尋/GPS/query及context清舊結果，map/request序列分開，保留方案/備選增量0與legacy相容測試。
 
 ### US3：有依據的簡短提示
 
-- [ ] T060 [US3] 修 `existing_app/client/src/pages/MemoPathPage/route-preview.ts`：一般輪椅需求只評估，無選結論；不足短句、障礙/協助直接顯示，詳細依據/日期/缺口展開，測試局部/未知/過期/衝突/障礙/協助/完整不誤confirmed。
+- [X] T060 [US3] 修 `existing_app/client/src/pages/MemoPathPage/route-preview.ts`：一般輪椅需求只評估，無選結論；不足短句、障礙/協助直接顯示，詳細依據/日期/缺口展開，測試局部/未知/過期/衝突/障礙/協助/完整不誤confirmed。
 
 ### US4：演示頁內資料／普通保存
 
-- [ ] T061 [US4] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：frontend demo及verified.isDemo使用同RAM業務分支，認證/登出保留；短句提示、香港公共地点及行程預設；普通API、角色、错误與保存不改。
-- [ ] T062 [US4] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：演示按elder保存/恢复RAM快照，不寫ELDER_KEY；非業務session view識別供刷新重建preset，登出/切身份清理，业务修改/coords不入storage，無儲存方式設定。
-- [ ] T063 [US4] 擴 `existing_app/tests/integration/route-ui.validation.ts`：普通入口、390px/鍵盤/無多餘控件，demo新增/編輯/刪除place/trip/elder/setting/geofence及跨頁/切elder/刷新RAM恢復，business API寫入0；受控map/route/search錯誤、GPS與全部context隔離。
-- [ ] T064 [US4] 擴 `existing_app/tests/integration/route-identity.fixture.ts` 及適用真實業務測試：獨立_test庫合成普通帳號真實保存/重讀與權限失敗、verified demo client業務寫入0，測試services/accounts清理0，不改開發DB。
+- [X] T061 [US4] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：frontend demo及verified.isDemo使用同RAM業務分支，認證/登出保留；短句提示、香港公共地点及行程預設；普通API、角色、错误與保存不改。
+- [X] T062 [US4] 修 `existing_app/client/src/pages/MemoPathPage/memopath-engine.ts`：演示按elder保存/恢复RAM快照，不寫ELDER_KEY；非業務session view識別供刷新重建preset，登出/切身份清理，业务修改/coords不入storage，無儲存方式設定。
+- [X] T063 [US4] 擴 `existing_app/tests/integration/route-ui.validation.ts`：普通入口、390px/鍵盤/無多餘控件，demo新增/編輯/刪除place/trip/elder/setting/geofence及跨頁/切elder/刷新RAM恢復，business API寫入0；受控map/route/search錯誤、GPS與全部context隔離。
+- [X] T064 [US4] 擴 `existing_app/tests/integration/route-identity.fixture.ts` 及適用真實業務測試：獨立_test庫合成普通帳號真實保存/重讀與權限失敗、verified demo client業務寫入0，測試services/accounts清理0，不改開發DB。
 
 ### Polish / 當次運行與交付
 
-- [ ] T065 運行 `existing_app` 純模型/状态/accessibility/cache、R2 controlled UI、lint/build、contracts/permissions/auth/demo適用回歸，退出碼與產物記 `specs/003-multimodal-accessibility/verification.md`，不擴無關能力。
-- [ ] T066 從普通入口以預設理大→醫院完成三方式真實查詢/地圖/指引，必要機場公交参照及名稱搜索一次，核390px及demo刷新、請求類別/次數，保存脫敏R2截圖/運行記錄到 `specs/003-multimodal-accessibility/evidence/`，失敗不fake或無限重試。
-- [ ] T067 更新 `specs/003-multimodal-accessibility/verification.md` 31行R2範圍/限制與 `existing_app/README.md`／`quickstart.md`／代碼职责文檔，保持R1歷史證據；核links/diff/秘密與清理，按Git extension提交實作checkpoint。
+- [X] T065 運行 `existing_app` 純模型/状态/accessibility/cache、R2 controlled UI、lint/build、contracts/permissions/auth/demo適用回歸，退出碼與產物記 `specs/003-multimodal-accessibility/verification.md`，不擴無關能力。
+- [X] T066 從普通入口以預設理大→醫院完成三方式真實查詢/地圖/指引，必要機場公交参照及名稱搜索一次，核390px及demo刷新、請求類別/次數，保存脫敏R2截圖/運行記錄到 `specs/003-multimodal-accessibility/evidence/`，失敗不fake或無限重試。
+- [X] T067 更新 `specs/003-multimodal-accessibility/verification.md` 31行R2範圍/限制與 `existing_app/README.md`／`quickstart.md`／代碼职责文檔，保持R1歷史證據；核links/diff/秘密與清理，按Git extension提交實作checkpoint。
 
 ### Dependencies / implementation strategy
 

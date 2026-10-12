@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-12",
+  "revision": "003 R2 ordinary live navigation",
+  "baseCheckpoint": "a2cd5ad",
+  "kind": "observed-command-results-and-static-review",
+  "checks": [
+    { "command": "node --import tsx --test route-model / route-state / route-accessibility / position-cache", "exitCode": 0, "passed": 25, "failed": 0, "scope": "pure controlled data, no real provider" },
+    { "command": "node --import tsx tests/integration/route-ui.validation.ts", "exitCode": 0, "passed": 74, "failed": 0, "businessRequests": 0, "realProviderRequests": 0, "evidence": "r2-browser-validation.json" },
+    { "command": "npm.cmd run lint", "exitCode": 0, "scope": "ESLint, stylelint, server/client TypeScript" },
+    { "command": "npm.cmd run build", "exitCode": 0, "scope": "server and client production build" },
+    { "command": "npm.cmd run build:client", "exitCode": 0, "artifact": "index-CxFeFkkT.js", "scope": "final search status copy increment" },
+    { "command": "npm.cmd run eslint", "exitCode": 0, "scope": "final source" },
+    { "command": "test:integration --suite contracts -> permissions -> auth -> demo -> persistence", "execution": "sequential dispatcher", "exitCodes": [0, 0, 0, 0, 0], "passed": 8, "scope": "actual independent test DB/HTTP; 25 API contracts; restart readback" },
+    { "command": "node --import tsx tests/integration/route-identity.fixture.ts", "exitCode": 0, "scope": "owned synthetic test DB accounts, actual authentication and business HTTP; CSP denies provider", "remainingOwnedAccounts": 0, "evidence": "r2-identity-fixture-cleanup.json" },
+    { "command": "node --import tsx tests/integration/route-identity.fixture.ts --smoke", "exitCode": 0, "scope": "latest fixture startup, ordinary API save/read and elder write denied, cleanup", "remainingOwnedAccounts": 0, "evidence": "r2-identity-fixture-smoke-cleanup.json" },
+    { "command": "git diff --check", "exitCode": 0 },
+    { "check": "active FR/SC delivery rows", "uniqueRequirements": 31, "FR": 23, "SC": 8 }
+  ],
+  "priorFailedAttempts": [
+    { "kind": "incorrect parallel multi-file business suite invocation", "result": "6/8 passed, permissions and restart persistence ECONNRESET", "resolution": "sequential project dispatcher all five suites passed; assertions unchanged" },
+    { "kind": "interim home/family demo state references", "result": "TypeScript and controlled UI failed", "resolution": "state-qualified references; final types/build and 74 UI assertions passed" },
+    { "kind": "controlled map destruction assertion after no-GPS public home map mount", "result": "asserted newest home map instead of disposed route map", "resolution": "capture route map instance before leaving; final passed" },
+    { "kind": "temporary SQL readback script", "result": "CJS top-level await rejected before DB operations", "resolution": "async main, SQL assertions passed, temporary script removed" }
+  ],
+  "realProviderEvidence": "r2-live-runtime.json",
+  "realBusinessEvidence": ["r2-verified-demo-counts.json", "r2-ordinary-demo-sql-readback.json"],
+  "historicalEvidence": "E01-E10 preserved, not counted as R2 acceptance",
+  "boundaries": {
+    "newFeatureNumber": false,
+    "publicApiChanges": false,
+    "roleOrCarePermissionChanges": false,
+    "serviceResponsibilityChanges": false,
+    "newMigration": false,
+    "newDependencyOrProvider": false,
+    "developmentDatabaseChangedByFixtures": false,
+    "newPaidServiceOrPaymentConfiguration": false,
+    "privateGPSUsed": false,
+    "confirmedFullRouteAccessibilitySamples": 0,
+    "privateQuotaOrOverageIndependentlyVerified": false
+  },
+  "remainingTask": "T002 private AMap entitlement evidence",
+  "buildWarnings": "Existing module config and chunk size warnings remain"
+}

@@ -1,66 +1,64 @@
-# Verification Plan and Delivery Scope: 003
+# Verification and Delivery Scope: 003 R2
 
-更新日期2026-10-12。003 已實作共同模型、來源門禁、三方式預覽、版本隔離與保守輪椅提示；52/53任務完成，私有高德權益核查仍待資料。受控返回不是當次真實高德或實地證據，001／002仍只證明歷史時點。
+更新：2026-10-12。修訂同一003，以普通入口的真實使用體驗為準；spec/plan/tasks checkpoints：`ca196ea` / `67b3cf6` / `a2cd5ad`。R1記錄與E01–E10保留為歷史，不作R2驗收。沒有新增編號、公開API、授權／服務責任、DB migration 或依賴。
 
-## 檢查與運行證據編號
+## 當次證據與一致性分析
 
-| ID | 检查與可觀察結果 | 必須保存的實作後證據 |
+- **R2-A（T054）靜態一致性**：實作前只讀核spec、plan、model、contract、tasks：23FR＋8SC都有映射，critical/high=0，未映射=0。已刪產品来源／模拟／回放要求，保留共享模型的測試來源型別；frontend及verified `isDemo` 共用RAM分支。相容前端增量不需契約或職責調整／DB遷移；rollback見C05，回退前端匹配checkpoint即可。
+- **R2-B 純／受控**：[74項UI斷言](evidence/r2-browser-validation.json)、[受控畫面](evidence/r2-controlled-ui.png)。route-model/state/accessibility/position-cache **25/25**，controlled UI **74/74**；受控provider/GPS=0、business API=0。覆蓋普通入口、legacy exports與搜索、快切/遲到/離頁、SDK/map錯誤、六類依據邊界、demo新增／編輯／刪除／設定／圍欄／長者及跨頁／切elder／刷新。控制物件不是當次真實高德或設施證據。
+- **R2-C 構建／回歸**：[命令結果與失败修正記錄](evidence/r2-validation-summary.json)。lint（ESLint/stylelint/server+client types）退出0；完整build退出0；最後搜索狀態文案增量client build退出0。contracts→permissions→auth→demo→persistence順序運行全退出0，共8/8 Node測試（contracts覆蓋25API，persistence含重啟重讀及編輯／刪除）。首次誤用多檔`node --test`並行，兩項ECONNRESET，不能當通過；按專案串行調度重跑後通過。中途修改的錯誤狀態引用與地圖銷毀斷言亦先失敗再修正，最終74項／types重新通過。Vite既有module/chunk警告仍在。
+- **R2-D 當次真實服務**：[運行記錄](evidence/r2-live-runtime.json)。普通長者首頁公共點→同導航頁，理大→醫院：步行44分鐘/3.2公里、駕車11分鐘/4.5公里、公交35分鐘/4.2公里/0換乘（4方案）。底圖、分段路線、起終點及指引可見；機場公交1小時7分鐘/38.2公里/2換乘（5方案），屯馬線→東涌線→S1，3乘車段、有序接駁。真實名稱搜索有香港科學館／南門等地區及地址候選。390px scrollWidth=390，沒有來源／情境／回放／坐標控件；詳細／來源預設折疊。5次明確direction操作（含最終產物步行覆驗）、1次inputtips；SDK/tiles另有流量，未作帳單計數。沒有GPS授權／私人位置、新服務、付費設定變更或自動假路線。
+- **R2-E 真實保存／RAM**：[演示請求計數](evidence/r2-verified-demo-counts.json)、[SQL重讀](evidence/r2-ordinary-demo-sql-readback.json)、[清理](evidence/r2-identity-fixture-cleanup.json)、[最新fixture smoke清理](evidence/r2-identity-fixture-smoke-cleanup.json)。只用獨立_test庫與三個本次隨機合成帳號。verified demo普通登入→新增科學館行程→頁內可見→刷新只剩預設，業務寫请求0、DB新增行程0；普通客户端布局鎖設定PUT1、刷新與SQL重讀true；普通API行程201且重讀、elder寫403。CSP刻意封provider的夾具內普通新增行程真實搜索失敗，未保存／未假成功，不稱此情境端到端成功。所有自建帳號剩餘0、3104/3105已停止，未改開發DB、未加migration。更廣普通資料保存由persistence真實API／重啟回歸證明，frontend更多RAM分支由受控UI證明。
+
+## FR交付範圍（23行）
+
+| 要求 | 實作／檢查 | R2運行證據與限制 |
 | --- | --- | --- |
-| V01 | 共同模型／信任边界：允許值、有限坐标含0、缺／空／負／NaN数值、缺instruction／站名、几何坏点／缺段、部分可解析／全畸形、合法空方案vs失败 | route-model Node断言输出＋去敏测试来源；模拟解析证明，不是live覆盖 |
-| V02 | 公交：完整方案分开、首／末／换乘walk、ride顺序、同段备选不加乘车段、未知段transferCount未知、改备选总量适用性、不可變原方案與導出呈現分開 | 独立模型输出、结构对照；V04另证当前UI |
-| V03 | 当前真实浏览器三方式：少量明确香港公共点、时间／距离／文字／几何与响应一致；callback JSON修正及不依赖定位建图 | public sample、当次查询时间／类型／次数、去敏规范结果、截图与当前产物；历史HTTP不可替代 |
-| V04 | 当前公交指引／换乘UI：上下车、接驳、同段备选、选择／缺字段反馈与真实或回放一致 | 含換乘场景截图／步骤、合法原结果引用；若构造则标simulated，不当真实 |
-| V05 | 状态与隔离：前置解析／定位起即失效；正反快切；旧成功／旧失败；nav/back同屏、身份／elder／demo／source、卸载；查询中切需求；A→B→A及同段備選往返不重查、兩種版本拒絕舊評估、新查詢拒絕舊批次 | state断言＋受控UI操作日志／截图，分别证明线、摘要、文字、結論清除，記往返選擇的路線請求增量0、原批次未改及舊評估拒絕。标人为延迟／模拟，无真实身份写操作声明 |
-| V06 | 无路线、provider／网络／timeout／config／配额提示、畸形响应、坐标／定位失败均不造成功；可改／重试；sourceMode不自动改变；未發送時requestAttempt=not-sent、sentAt/provenance=null，已發送失敗才記sent及live調用嘗試 | 显式故障夹具输出与UI截图，核未發送時無路線請求、無虛構來源／時點，已發送失敗不宣稱取得路線；自然真实失败可另记，禁止耗尽配額制造错误 |
-| V07 | 轮椅证据：exact／background、partial／insufficient、未知／过期日期、冲突、已知障碍、協助未确认；完整模拟与真實confirmed分开 | evidence规则断言、局部静态来源／日期核對、UI六类边界、当前真实完整样本数 |
-| V08 | 来源：每项live/static/replay/simulated标签、实施未完成独立、demo身份不混来源；失败需用户明确改来源 | 混合來源、静態历史、模擬与未完成截图／操作；來源计数分母与缺标次数 |
-| V09 | 免費／许可：高德类别、余额、期限、来源限制、付费关闭／限额、资料再利用，结果只记录可公开非秘密字段 | 使用前核查日期／依据／限制；未可核实记blocked并停该live／资料打包，不声明免费无限 |
-| V10 | 相容／隐私／职责：三旧导航与四搜索入口、legacy export、定位TTL、支持contracts／permissions／auth／demo、无新DB/API／周期上传／录音 | rg／diff與型別、适用旧测试、UI回归、脱敏网络请求种类；无迁移审阅说明，不把静态检查当UI通过 |
-| V11 | 文档／构建：函数职责、输入输出／副作用／错误／边界、来源和有界限制；lint／build适用；31行交付范围表与证据互链 | 命令退出码／产物、审阅diff、links检查、更新后状态表 |
-| V12 | 有界完整故事：公共选点→三方式／公交→设施与缺口→错误／来源，窄屏／键盘可读；实地／全程样本／维护前置数0 | 演示步骤与截图，实际可用清单、暫緩原因／影响、31项总数，真实全程样本数可为0 |
+| FR-001 | 同tripMap與四既有導航入口；T056–058 | B舊入口；D真實首頁公共點三方式，無新console |
+| FR-002 | 名稱/GPS/preset Endpoint、唯一匹配；T056/058 | B同名/零/遲到GPS；D帶入公共點、真實搜索候選；真實GPS未授權 |
+| FR-003 | 真實AMap、metrics/details；T056/057 | D底圖、線、marker、指引與易讀量值；B缺值/map故障，不補幾何 |
+| FR-004 | 有序leg/options/transfer；T055/056/059 | B備選往返0重查；D醫院及機場真實3乘車/2換乘；缺ride instruction明示 |
+| FR-005 | invalidate/abort/draw版本；T057/059 | B輸入/查詢開始四呈現清除，失敗不恢復 |
+| FR-006 | identity/elder/view/map/request guards；T059/062 | B完整context遲到隔離、切elder及刷新；E真實認證登出/換身份 |
+| FR-007 | 失敗分類/保留輸入/分開map；T057/059 | Bno-route/transport/timeout/GPS/map及重試；E真實CSP搜索失敗不假成功 |
+| FR-008 | 一般需求只改評估；T060 | B需求切換不重查；D真實route不足提示 |
+| FR-009 | 依據適用與保守結論；T055/060 | B局部/不足/障礙UI；D無全程證據，不選結論 |
+| FR-010 | 全必要obligations/date/assistance；T055/060 | B純規則25項的一部分；真實全程confirmed=0 |
+| FR-011 | 短提示/直接障礙/details；T060 | B已知障礙直接顯示、背景不升級；D不足短句 |
+| FR-012 | 來源、日期、條件/details；T056/060 | B適用證據日期/缺口；D當次高德來源與static官方連結；正文未載入 |
+| FR-013 | 未知/過期/衝突/障礙；T055/060 | B六類日期／條件UI與純測試；無統一虛構TTL |
+| FR-014 | 必要staff直接顯示未預約；T060 | Bconditional/unknown/unavailable不confirmed，直接顯示條件；無真實安排 |
+| FR-015 | 普通路線不保證可達；T060 | B判定規則；D成功三方式仍不足 |
+| FR-016 | query固定live，SDK/search v3；T055/057/059 | D真實route/map/search/transit；預設僅input，設施僅static來源連結 |
+| FR-017 | 移除產品合成/回放/來源控件；T055/056/059 | B/C/D控件0、非live拒發送；合成只在tests，失敗無fallback |
+| FR-018 | 五個公共香港shortcut及兩行程；T056/058/061 | B/Epreset刷新；D醫院/機場/科學館搜索，其他點不宣稱全驗 |
+| FR-019 | R2與R1隔離、31行scope；T054/067 | A–E分真實/靜態/受控/限制；E01–E10歷史不覆寫 |
+| FR-020 | 有限故事無三項前置；T066/067 | D已完成有界故事，實地/全程確認/長期維護前置各0 |
+| FR-021 | 既有Key／服務無付費調整；T059/066 | D依既有授權，沒有新provider/充值；T002私有額度／付費設定仍未核 |
+| FR-022 | Auth/Care權限及本機位置；T059/062/064 | C五套真實回歸；Eelder寫403；demo中心public不冒充GPS，無新追蹤/錄音 |
+| FR-023 | demo RAM/normal API、無migration；T061–065 | B更多RAM分支API0；Everified demo業務0、普通PUT/SQL重讀；C真實persistence重啟通過 |
 
-## FR逐项交付範圍表
+## SC交付範圍（8行）
 
-sourceKind：E01純邏輯合成；E02受控simulated＋static來源連結；E03本機構建；E04真實本機回歸嘗試／blocked；E05只讀邊界檢查；E06真實HTTP、E07恢復DB回歸、E08真實瀏覽器、E09本輪純/受控/構建。implemented表示代碼可用，不等同未執行情境passed。
+| 條件 | 對應檢查 | R2結果與口徑 |
+| --- | --- | --- |
+| SC-001 | T056–058/066，D | 公共理大→醫院真實三方式／地圖／指引成功；缺值明示 |
+| SC-002 | T055/056/066，B/D | 醫院順序接駁，機場3乘車/2換乘；受控備選誤計0 |
+| SC-003 | T057/059/062/063，B/E | 受控快切/context/方案備選往返誤回填0；真實認證換身份/刷新清RAM |
+| SC-004 | T057/059/063，B/E | 四类失敗不造成功，map分開、provider封鎖保留錯誤；無自然配額耗盡測試 |
+| SC-005 | T055/060/063，B/D | 局部、不足、未知/過期/衝突、障礙/staff覆蓋；真實误confirmed0 |
+| SC-006 | T056/058/063/066，B/D | 390px無溢出、44px模式按鈕、keyboard、控制台與來源/模拟/回放/坐標控件0 |
+| SC-007 | T054/067，A–E | FR23＋SC8=31行，本輪證據/歷史/限制分開；來源可展開，真實confirmed0 |
+| SC-008 | T061–066，B/C/D/E | verified demo行程DB0與刷新預設，普通設定UI+SQL/行程API重讀；更多增編刪RAM受控，三項前置0 |
 
-| 要求 | 设计位置／检查 | 实作后验收结果与证据边界 | 当前实现／验证 |
-| --- | --- | --- | --- |
-| FR-001 | C01，V03/V10 | 主入口三方式；三旧入口保留方式与正确状态 | implemented；E08真實公共點三方式；E10舊主頁搜尋/返家walking、行程/地點driving，四入口失敗/重試/離頁受控通過；真實帳號主入口另驗 |
-| FR-002 | model Endpoint/context，V01/V03/V06 | 明確公共点，定位拒绝可继续；不猜同名或造坐标 | implemented；E01/E09拒絕定位、合法0與同名明選；E08尖東P1及科學館南門從候選明選，不宣稱實地核驗 |
-| FR-003 | model Plan/geometry，V01/V03 | 数值／文字／线与结果一致，缺项标未提供 | implemented；E08真實摘要/指引/分段幾何；E09空railway佔位不造乘車段，未知幾何仍保留缺口，SVG無底圖 |
-| FR-004 | model Legs，V02/V04 | 接驳／站點／备选／换乘正确，無换乘不造 | implemented；E08 D04按屯馬線→東涌線→S1、3乘車段/2換乘；D03同段備選不加換乘，ETA失效；E09受控規則通過 |
-| FR-005 | model state，V05 | 查询前全部旧呈現失效，失败无旧结果 | implemented；E01/E02 loading、錯誤、無路線撤銷舊呈現；無靜默成功 |
-| FR-006 | model context，V05 | 每await及catch上下文匹配，离页／身份／模式不回填 | implemented；E09完整context純斷言及受控遲到隔離；E10實際認證長者離頁/再入/登出/前端演示切換清除舊結果，四舊入口受控回調清理 |
-| FR-007 | model outcome，V01/V06 | no-route与失败／未完成分辨，可改／重试 | implemented；E01/E02 無路線、前置失敗、未完成、已發送受控錯誤分開，輸入保留／手動重試 |
-| FR-008 | model需求，V07 | 一般轮椅开关仅评估，关开不改路线来源 | implemented；E01/E02 輪椅開關只評估，不重查路線，loading返回可使用最新需求 |
-| FR-009 | model Conclusion，V07 | 三类可表达；真实无完整样本时无confirmed，障碍显式 | implemented；E01/E02 不足／局部／完整模擬分支及障礙；真實 confirmed=0 |
-| FR-010 | model结论规则，V07 | 必要段缺口不confirmed；模拟完整仅测逻辑，真实样本可0 | implemented；E01 必要段及兩端入口各自需要當次適用依據；E02 完整僅為 simulated |
-| FR-011 | evidence matching，V07 | 具体支持与缺口可见，背景不冒充路段 | implemented evaluator及許可未知降級；E08僅官方靜態連結、日期未知、未載入內容及不足；不交付未授權正文或入口綁定 |
-| FR-012 | evidence日期／来源，V07/V08 | source／原日期或未知／查阅日／条件齐全，静態非即時 | implemented；E02 各模擬資料及靜態來源連結顯示日期／未知／查閱日；無打包官方正文 |
-| FR-013 | dateAssessment，V07 | 日期未知／过期／冲突明确；无假TTL／维护承诺 | implemented；E01/E02 未知／過期／衝突保留缺口，查閱日不是來源有效期；無自訂TTL |
-| FR-014 | assistance，V07 | 斜板需协助／确认条件；没有本次安排不称预约 | implemented；E01/E02 協助可用性需依據，條件／未知／不可用不能confirmed，保持未預約 |
-| FR-015 | Conclusion规则，V07 | 普通步行／最短／少换乘／驾车不自动confirmed | implemented；E01/E02 路由模式與輪椅判定獨立，普通路線不自動升級 |
-| FR-016 | provenance，V08 | 路线与每项设施独立标识、混合正确 | implemented；E08 live路線＋static資訊不足評估及3官方連結分項顯示，未完成回放/顯式模擬另列；無合法歷史payload |
-| FR-017 | sourceMode/outcome，V05/V06/V08 | 模拟持续标、真实失败不自动成功或变来源 | implemented；E02 顯式選模擬才生成；live門禁失敗仍live/not-sent，受控sent錯誤不轉成功 |
-| FR-018 | D01–D04，V03/V04/V12 | 小范围香港故事与换乘参照，覆蓋限制明示 | implemented limited story；E08 D01兩方式及公交no-route，D03補真實三方式，D04換乘；D02未查，公共POI/入口不是可達確認 |
-| FR-019 | DeliveryScopeRow，V11/V12 | 每能力来源／证据／暂緩原因影响，真静模分开 | implemented；31行範圍表已更新E08/E09與仍未驗限制，不將受控返回算真實 |
-| FR-020 | plan范围，V12 | 全程真实样本0可交付限度，三项非前置 | implemented；E08真實公共點與顯式模擬完成有界故事，實地/全程確認/維護前置均0 |
-| FR-021 | R06/C02，V09 | 免费／许可查证或停调用／打包，不付费或换服务 | implemented gate＋deferred live；ROUTE_LIVE_REVIEW.allowed=true（使用者新指示），私有免費設定仍未獨立核驗；不新增付費／服務，靜態正文停打包 |
-| FR-022 | C03/章程，V05/V10 | 既有身份隔离／共享／位置／语音／手表边界保持 | 通過相稱範圍；E07 SQL/HTTP权限/auth/demo、E10實際照護關聯長者登入與登出；受控導航API寫入0，未改角色/權限或加入遠端位置/錄音 |
-| FR-023 | C03/C04，V10/V11 | 公共API／职责保持，无DB；若需变更先方案确认 | implemented without contract/migration changes；E07 25API，E09舊export/四搜尋，E10舊導航81/81及實際長者主入口；全部舊入口真實provider/GPS端到端未宣稱通過 |
+## R2未完成限制與相容審閱
 
-## SC逐项验收範圍表
+T002仍未取得私有高德Web Service/JS免費類別、剩餘額度／期限、來源限制及付費超額關閉的獨立證據；使用既有Key已獲授權，不能聲稱已核免費或無限。五個preset不是實地入口確認；沒有真實全程輪椅confirmed、職員安排、持續設施內容或長期維護承諾。真實GPS及所有舊入口的真實provider故障／私人身份全組合未測；相稱受控覆蓋單列。原有天氣、叫車、支付、求助等業務展示未在R2接入服務或扩能力。
 
-| 条件 | 检查 | 計數／證據与通过口径 | 当前验证 |
-| --- | --- | --- | --- |
-| SC-001 | V03/V08 | >=1组3方式各有结果，逐方式真实／静態／模擬分别记录；未完成方式不达标，混合演示不叫真實三方式全通过 | 通過有界真實UI範圍；E08 D03步行/駕車/公交各一次成功；D01公交no-route保留，不用模擬補數 |
-| SC-002 | V02/V04 | >=1含换乘情境完整，误计备选为0；live／历史／模拟分列 | 通過真實及受控範圍；E08 D04 3乘車段/2換乘及有序接駁；D03同段備選誤加換乘0，ETA不沿用；E09合成規則亦通過 |
-| SC-003 | V05 | 正反切換、前置解析／定位、快切、重试及各context场景，旧结果误标0 | 通過純/受控與實際身份範圍；E09全context、快切、方案/備選往返誤回填0；E08真實切方式四類內容撤銷；E10實際長者離頁/身份/演示清除；遲到/GPS為受控 |
-| SC-004 | V01/V06 | 无路線／失败／缺坐标／定位拒绝4类反馈，伪造成功／缺值造数0 | 受控範圍通過；E01/E02 無路線／失敗／缺坐標／拒絕定位皆反饋，缺值造數／偽成功0；不是自然供應商故障 |
-| SC-005 | V07 | 6类边界完整，真实误confirmed0；模拟完整不增加真实样本数 | 通過受控邊界及真實不足範圍；E09六類提示/完整模擬，E08真實路線均資訊不足；真實confirmed=0 |
-| SC-006 | V07/V08 | 展示条目来源齐全率100%，分母为所有路线方案／设施卡／场景／未完成入口；每资料日期或未知都有 | 通過已展示項目範圍；E08 live路線/評估/靜態連結5/5、E09模擬路線/評估/依據/連結6/6；回放未完成明示原因/來源，無合法歷史內容不虛構 |
-| SC-007 | V11/V12 | FR23行及SC8行各一，共31行无遗漏，暂緩有原因与影响；真实全程数单列0可接受 | 通過交付表檢查；FR23＋SC8=31行，各有來源／證據／限制，暫緩不當passed；真實confirmed=0 |
-| SC-008 | V12 | 1次完整故事，实地／全程确认／长期维护前置计数0；实际可用范围及未达项保留 | 通過有界故事範圍；E08 D01→D03三方式→D04換乘→不足→未完成回放→顯式模擬及390px鍵盤；E10身份切換另驗，三非前置均0，私有權益仍待核 |
+前端仍負責導航呈現／RAM，Auth仍負責認證，Family/Elder仍負責普通保存與授權。server/shared/DTO/schema未變；無不相容契約、職責調整或資料遷移，無需DB rollback。程式職責、輸入輸出與錯誤見 [client模組說明](../../existing_app/client/src/pages/MemoPathPage/README.md)，手動驗收見 [quickstart](quickstart.md)。七原則相稱核對：長者易讀／有依據可達／資料真實／隱私权限／既有資源／責任與文檔／必要測試均有上述證據；私有權益、實地與完整可達未驗如實保留。
+
+## R1歷史證據（以下截至原003；其來源選擇／模擬／回放設計已被R2取代）
+
 
 ## 本轮计划证据与历史材料
 
