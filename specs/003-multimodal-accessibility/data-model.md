@@ -1,6 +1,18 @@
 # Data Model: 三方式、查詢狀態與無障礙依據
 
-日期2026-10-11，實作契約；以下型別已於client route模塊實作，驗證範圍見verification。不新增DB、API DTO或持久化偏好。欄位以camelCase命名，nullable明確用null；現有tsconfig關閉strictNullChecks，不能只靠型別，須有運行驗證。
+日期2026-10-12，R2實作契約。共同模型與純規則保留，新增普通選點與頁內演示資料，不改DB或公開DTO。nullable明確用null；現有strictNullChecks關閉，仍需運行驗證。R1完整契約可由3894916查閱。
+
+## 0. R2產品與測試界線
+
+產品RouteSelection/Query固定sourceMode=live、sampleId=null；歷史模型的replay/simulation與simulated provenance只供測試或歷史證據，不是產品入口。以下共同型別保留其允許值是為測試邊界／解析，不能用它生成產品模擬結果。
+
+Endpoint內部坐標仍驗證有限範圍及合法0，但用戶只操作label搜尋、定位或preset ID。候選另帶district/address，不顯示坐標；修改label立即撤銷原Endpoint，不能新名配舊坐標。既有行程名只在唯一精確匹配places/presets時帶入位置，其他需明選。
+
+PublicPreset：id、label、point、address、來源說明；只使用E06/E08已取得公共點理大/醫院/尖東P1/科學館南門/機場T1，不證明核驗入口。合法選擇與搜索結果共用Endpoint驗證。
+
+DemoBusinessSnapshot：按elderId的RAM contacts/trips/places/geofence，切換前保存快照／切回恢復；新身份/刷新清除重建，長者資料和設定亦只RAM。普通狀態仍原API/持久化。sessionStorage只允許非業務demo view elder/family，沒有业务ID、修改或坐標；演示不寫ELDER_KEY，登出清模式，認證token沿用既有政策。
+
+MapState：SDK等待/ready/error及drawVersion，與route outcome分開。draw(null)同步清overlays；遲到SDK須匹配identity/view/elder與drawVersion，離頁destroy；error只顯示地圖重試，不捏造或清掉真實route指引。
 
 ## 1. 基本值與來源
 
@@ -13,7 +25,7 @@
 | ImplementationStatus | implemented/not-implemented/deferred與reason；與sourceKind獨立。unimplemented不生成success路線 |
 | MissingField | path、reason=not-provided/invalid/unsupported、不可信原值不入畫面；便於具體顯示缺站名／時間／幾何 |
 
-live只用於該次實際供應商請求的結果（成功或失敗）；所選sourceMode不代表已調用或已取得結果。請求前失敗的provenance為null，畫面顯示「所選來源：真實查詢｜尚未調用」與實際原因，不顯示「真實當次查詢結果」或虛構查詢時點。改來源模式必須重新建請求。歷史live結果重新開啟展示為static/historical-replay，originalQueriedAt保留，不改成現在查询時間。回放无合法完整数据時僅顯示歷史文字證據；根據文字構造可執行payload標simulated。
+live只用於當次實際供應商請求。前置失敗provenance=null，不造查詢時點；已發送失敗只記實際嘗試。產品頁沒有來源選擇或回放，來源metadata在成功結果詳情查閱。歷史／simulated規則僅用於測試與交付檔，不能把舊payload改成當次返回。
 
 資料日期用來源原精度（日期或日期時間）並記精度／時區；查閱時間為ISO時間，畫面以Asia/Hong_Kong顯示。publishedAt不是updatedAt，observedAt不是來源更新或效力證明。不輸出Key、完整敏感請求URL、token或私人起點。
 
