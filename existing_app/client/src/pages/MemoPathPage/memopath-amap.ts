@@ -1,5 +1,8 @@
 import { logger } from '@/lib/logger';
 import { isPositionCacheFresh, POSITION_CACHE_TTL_MS } from './position-cache';
+import { normalizeRoute, validQuery, routeError, point as routePoint } from './route-model';
+import type { RouteQuery, RouteQueryOutcome, ErrorCategory, Provenance, PolylineFragment } from './route-model';
+import { ROUTE_LIVE_REVIEW } from './route-preview-data';
 
 const AMAP_KEY = (import.meta.env.VITE_AMAP_KEY ?? '').trim();
 const REST_BASE = 'https://restapi.amap.com/v3';
@@ -186,9 +189,12 @@ function parseLocation(raw: unknown): AMapPoint | null {
   return { lng, lat };
 }
 
-async function ampRest(path: string, params: Record<string, string>): Promise<AmpRestEnvelope> {
+/** Existing JSONP transport, with official output=JSON+callback. Optional cancellation
+ * releases script/timer/callback; errors never log secret URLs or key values. */
+async function ampRest<T = AmpRestEnvelope>(path: string, params: Record<string, string>, options: { signal?: AbortSignal; onSent?: () => void } = {}): Promise<T> {
   if (!AMAP_KEY) throw new Error('AMap key is not configured (VITE_AMAP_KEY)');
-  return new Promise<AmpRestEnvelope>((resolve, reject) => {
+  return new Promise<T>((resolve, reject) => {
+    if (options.signal?.aborted) { reject(new Error('Route cancelled')); return; }
     const callbackName = `__memoAmpCb_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
     const w: Window & Record<string, unknown> = window as unknown as Window & Record<string, unknown>;
     const script: HTMLScriptElement = document.createElement('script');
@@ -196,12 +202,14 @@ async function ampRest(path: string, params: Record<string, string>): Promise<Am
       window.clearTimeout(timer);
       delete w[callbackName];
       script.remove();
+      options.signal?.removeEventListener('abort', abort);
     };
+    const abort = (): void => { cleanup(); reject(new Error('Route cancelled')); };
     const timer: number = window.setTimeout(() => {
       cleanup();
       reject(new Error('高德服務請求超時'));
     }, 10000);
-    w[callbackName] = (json: AmpRestEnvelope): void => {
+    w[callbackName] = (json: T): void => {
       cleanup();
       resolve(json);
     };
@@ -211,13 +219,50 @@ async function ampRest(path: string, params: Record<string, string>): Promise<Am
     };
     const query: URLSearchParams = new URLSearchParams({
       key: AMAP_KEY,
-      output: 'JSONP',
+      output: 'JSON',
       callback: callbackName,
       ...params,
     });
     script.src = `${REST_BASE}/${path}?${query.toString()}`;
+    options.signal?.addEventListener('abort', abort, { once: true });
     document.head.append(script);
+    options.onSent?.();
   });
+}
+
+/** New frontend-only route interface. Keep legacy planRoute/formatters unchanged.
+ * Validates before sending, records real attempts only on dispatch, never retries or
+ * silently substitutes simulation. Account review blocks only new live route calls. */
+export async function queryRoute(query: RouteQuery, options: { signal?: AbortSignal } = {}): Promise<RouteQueryOutcome> {
+  if (!validQuery(query)) return routeError(query, 'invalid-input', '請明確選定有效起終點與方式');
+  if (query.sourceMode !== 'live' || query.sampleId !== null) return routeError(query, 'invalid-input', '產品導航只支援當次真實查詢');
+  if (!AMAP_KEY) return routeError(query, 'config', '尚未配置高德Key');
+  if (!ROUTE_LIVE_REVIEW.allowed) return routeError(query, 'config', ROUTE_LIVE_REVIEW.reason);
+  let sentAt: string | null = null;
+  let provenance: Provenance | null = null;
+  try {
+    const params: Record<string,string> = { origin:`${query.origin.point.lng},${query.origin.point.lat}`,destination:`${query.destination.point.lng},${query.destination.point.lat}`,...(query.mode==='transit'?{city:'香港',cityd:'香港',extensions:'all'}:{}) };
+    const raw = await ampRest<unknown>(`direction/${query.mode==='transit'?'transit/integrated':query.mode}`,params,{signal:options.signal,onSent:()=>{sentAt=new Date().toISOString();provenance={kind:'live',provider:'高德',sourceTitle:'當次路線查詢嘗試',sourceUrl:null,referenceId:`request:${query.requestId}`,observedAt:sentAt,originalQueriedAt:null,publishedAt:null,updatedAt:null,limitations:['供應商估計不證明輪椅可達']};}});
+    return normalizeRoute(raw,query,provenance!,sentAt);
+  } catch(error) {
+    const category:ErrorCategory=error instanceof Error&&error.message==='高德服務請求超時'?'timeout':'transport';
+    return routeError(query,category,'路線查詢未完成，請重試或修改選擇',provenance,sentAt);
+  }
+}
+
+/** New explicit HK public-point search. No first-result guessing or retry; quota
+ * review applies before dispatch. Existing searchTips contract stays unchanged. */
+export async function searchPublicRouteTips(keyword:string,signal?:AbortSignal):Promise<AmpTip[]>{
+  if(typeof keyword!=='string'||!keyword.trim()||keyword.length>200)throw new Error('請輸入有效公共地點名稱');
+  if(!ROUTE_LIVE_REVIEW.allowed)throw new Error(ROUTE_LIVE_REVIEW.reason);
+  const json=await ampRest<AmpRestEnvelope>('assistant/inputtips',{keywords:keyword,city:'香港',citylimit:'true',datatype:'all'},{signal});
+  if(json.status!=='1'||!Array.isArray(json.tips))throw new Error('公共地點搜索未完成');
+  return json.tips.filter(t=>typeof t.name==='string'&&t.name.length>0&&t.name.length<=200).map(t=>({name:t.name!,district:typeof t.district==='string'?t.district:'',address:typeof t.address==='string'?t.address:'',location:parseLocation(t.location)}));
+}
+
+/** Draw only supplied valid fragments; no links across gaps or candidates. */
+export function createRouteFragments(fragments: PolylineFragment[], color: string): AMapOverlay[] {
+  return fragments.filter(f=>f.points.length>=2&&f.points.every(p=>routePoint(p)!==null)).map(f=>createRoutePolyline(f.points,color)).filter((o):o is AMapOverlay=>o!==null);
 }
 
 export async function geocodeAddress(address: string): Promise<AMapPoint | null> {

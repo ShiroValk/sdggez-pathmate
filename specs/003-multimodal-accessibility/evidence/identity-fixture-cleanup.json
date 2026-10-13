@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-12T00:29:37.655Z",
+  "kind": "actual-test-SQL-HTTP-owned-fixture",
+  "remainingAccounts": 0,
+  "servicesStopped": [
+    3104,
+    3105
+  ],
+  "providerTraffic": "CSP explicitly blocked",
+  "counts": {
+    "GET /": 1,
+    "GET /assets/index-bYHTYFK3.js": 1,
+    "GET /assets/index-BuOds-sj.css": 1,
+    "GET /assets/memopath-logo-L9Bm53SZ.png": 1,
+    "GET /favicon.svg": 1,
+    "POST /api/memopath/auth/login": 1,
+    "GET /api/memopath/auth/me": 1,
+    "GET /api/memopath/dashboard": 3,
+    "GET /api/memopath/settings": 4,
+    "GET /api/memopath/elders": 4,
+    "POST /api/memopath/auth/logout": 1
+  },
+  "developmentDatabaseChanged": false,
+  "newMigrations": 0
+}

@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-12T00:34:07.287Z",
+  "kind": "actual-fixture-startup-cleanup-smoke",
+  "remainingAccounts": 0,
+  "servicesStopped": [
+    3104,
+    3105
+  ],
+  "providerTraffic": "CSP explicitly blocked",
+  "counts": {},
+  "developmentDatabaseChanged": false,
+  "newMigrations": 0
+}

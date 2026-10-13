@@ -1,4 +1,17 @@
 #!/usr/bin/env sh
 [ "$SKIP_GIT_HOOKS" = "1" ] && exit 0
-export PATH="node_modules/.bin:$PATH"
-npm run precommit
+set -eu
+
+# Git runs hooks at the repository root, while package.json lives in existing_app.
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+# Spec-only and watch-prototype commits do not need the main app's type checker.
+if ! git diff --cached --name-only --diff-filter=ACMRD -- existing_app/ |
+  grep -Ev '\.(md|png|jpg|jpeg|gif|webp|svg)$' | grep -q .; then
+  exit 0
+fi
+
+cd existing_app
+export PATH="$PWD/node_modules/.bin:$PATH"
+exec npm run precommit

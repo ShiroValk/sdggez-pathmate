@@ -1,0 +1,57 @@
+{
+  "observedAt": "2026-10-11T11:55:11.927Z",
+  "kind": "local-service-recovery-and-real-business-regression",
+  "docker": {
+    "action": "Started existing Docker Desktop and existing db container",
+    "container": "existing_app-db-1",
+    "volume": "existing_app_pathmate_pgdata",
+    "health": "healthy",
+    "databaseVersion": "0001",
+    "pendingMigrations": [],
+    "reset": false,
+    "recreated": false
+  },
+  "testDatabase": {
+    "reachable": true,
+    "separateFromDevelopment": true
+  },
+  "suites": [
+    {
+      "name": "contracts",
+      "exitCode": 0,
+      "tests": 1,
+      "passed": 1,
+      "scope": "25 supported API contracts"
+    },
+    {
+      "name": "permissions",
+      "exitCode": 0,
+      "tests": 1,
+      "passed": 1,
+      "scope": "care consent and protected-resource isolation"
+    },
+    {
+      "name": "auth",
+      "exitCode": 0,
+      "tests": 2,
+      "passed": 2,
+      "scope": "registration/session/role/logout; runtime DB failure returns 503"
+    },
+    {
+      "name": "demo",
+      "exitCode": 0,
+      "tests": 1,
+      "passed": 1,
+      "scope": "real demo authentication/persistence/isolation and disabled-session refusal"
+    }
+  ],
+  "initialRecoveryAttempt": "Database initially starting (57P03); first contracts retry then timed out at service readiness. Later bounded startup diagnosis succeeded and final sequential rerun passed all four suites without code changes.",
+  "application": {
+    "command": "npm.cmd run dev",
+    "host": "127.0.0.1",
+    "backendPort": 3000,
+    "frontendPort": 5173,
+    "retainedRunning": true
+  },
+  "limits": "Real synthetic SQL/HTTP regression, not real-user associations, live route browser, or physical accessibility validation. No new schema or service provider."
+}

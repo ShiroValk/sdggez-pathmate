@@ -1,0 +1,356 @@
+{
+  "date": "2026-10-12T00:31:11.985Z",
+  "sourceLabels": {
+    "displayedItems": 6,
+    "labelledItems": 6,
+    "scope": "Currently displayed synthetic route/conclusion/evidence and static link cards; not unexecuted live/replay"
+  },
+  "viewportWidth": 500,
+  "previewBounds": {
+    "x": 12,
+    "y": 60,
+    "width": 366,
+    "height": 3594.84375,
+    "top": 60,
+    "right": 378,
+    "bottom": 3654.84375,
+    "left": 12
+  },
+  "kind": "controlled-browser-simulation",
+  "checks": [
+    {
+      "name": "initial live selection makes no provider or location request",
+      "passed": true
+    },
+    {
+      "name": "explicit simulation gives synthetic routes/line/steps",
+      "passed": true
+    },
+    {
+      "name": "A-B-A does not query or mutate provider batch",
+      "passed": true
+    },
+    {
+      "name": "transit ordered access/transfer/egress and two rides",
+      "passed": true
+    },
+    {
+      "name": "same-leg alternatives roundtrip do not query/increase transfers",
+      "passed": true
+    },
+    {
+      "name": "wheelchair toggle never re-queries",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary partial",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary insufficient",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary no-date",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary expired",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary conflict",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary barrier",
+      "passed": true
+    },
+    {
+      "name": "known barrier visibly disclosed",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary staff",
+      "passed": true
+    },
+    {
+      "name": "staff not-booked condition visible",
+      "passed": true
+    },
+    {
+      "name": "accessibility boundary complete",
+      "passed": true
+    },
+    {
+      "name": "confirmed simulation remains labelled",
+      "passed": true
+    },
+    {
+      "name": "no-route removes old lines/summary/conclusion",
+      "passed": true
+    },
+    {
+      "name": "error does not create simulated success",
+      "passed": true
+    },
+    {
+      "name": "waiting synchronously clears old line/steps/conclusion",
+      "passed": true
+    },
+    {
+      "name": "late success cannot overwrite latest mode",
+      "passed": true
+    },
+    {
+      "name": "late failure cannot overwrite current success",
+      "passed": true
+    },
+    {
+      "name": "context isolation identityGeneration",
+      "passed": true
+    },
+    {
+      "name": "context isolation elderGeneration",
+      "passed": true
+    },
+    {
+      "name": "context isolation viewGeneration",
+      "passed": true
+    },
+    {
+      "name": "context isolation mapGeneration",
+      "passed": true
+    },
+    {
+      "name": "context isolation demoMode",
+      "passed": true
+    },
+    {
+      "name": "context isolation viewRole",
+      "passed": true
+    },
+    {
+      "name": "context isolation elderId",
+      "passed": true
+    },
+    {
+      "name": "source switch isolates old simulated response",
+      "passed": true
+    },
+    {
+      "name": "missing legal replay remains explicitly not implemented",
+      "passed": true
+    },
+    {
+      "name": "live preflight failure remains live/not-sent/no fabricated success",
+      "passed": true
+    },
+    {
+      "name": "mode switch rejects late GPS and preserves typed origin",
+      "passed": true
+    },
+    {
+      "name": "position denied preserves editable public inputs",
+      "passed": true
+    },
+    {
+      "name": "same-name candidates require explicit selection",
+      "passed": true
+    },
+    {
+      "name": "explicit candidate selects chosen coordinate including legal zero elsewhere",
+      "passed": true
+    },
+    {
+      "name": "missing coordinates rejected without success",
+      "passed": true
+    },
+    {
+      "name": "dispose rejects late route",
+      "passed": true
+    },
+    {
+      "name": "legacy search JSON callback parses legal zero",
+      "passed": true
+    },
+    {
+      "name": "legacy planRoute shape and formatter policies retained",
+      "passed": true
+    },
+    {
+      "name": "success releases JSON callback/script",
+      "passed": true
+    },
+    {
+      "name": "controlled sent success carries live attempt without being real evidence",
+      "passed": true
+    },
+    {
+      "name": "controlled provider failure remains live sent failure",
+      "passed": true
+    },
+    {
+      "name": "abort releases script callback and returns sent failure",
+      "passed": true
+    },
+    {
+      "name": "bounded timeout releases callback script",
+      "passed": true
+    },
+    {
+      "name": "legacy home search displays controlled JSON callback candidate",
+      "passed": true
+    },
+    {
+      "name": "legacy home search keeps walking default and explicit zero destination",
+      "passed": true
+    },
+    {
+      "name": "legacy home search navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy home search navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy home search navigation leave aborts callback and clears route page",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place preserves driving default",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy frequent place navigation leave aborts callback and clears route page",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled destination preserves driving text draft",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy scheduled navigation leave aborts callback and clears route page",
+      "passed": true
+    },
+    {
+      "name": "legacy home navigation offers scrollable walking inputs without map/GPS prerequisite",
+      "passed": true
+    },
+    {
+      "name": "legacy return home navigation live error clears all old output",
+      "passed": true
+    },
+    {
+      "name": "legacy return home navigation explicit retry succeeds with retained endpoints despite absent geometry",
+      "passed": true
+    },
+    {
+      "name": "legacy return home navigation leave aborts callback and clears route page",
+      "passed": true
+    },
+    {
+      "name": "real engine exposes three-mode entry without requiring GPS",
+      "passed": true
+    },
+    {
+      "name": "engine explicit simulation visible with independent static links",
+      "passed": true
+    },
+    {
+      "name": "engine nav/back clears preview and old outcome",
+      "passed": true
+    },
+    {
+      "name": "homeSearch search success",
+      "passed": true
+    },
+    {
+      "name": "homeSearch failure retains input and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "homeSearch retry succeeds and late candidate is isolated",
+      "passed": true
+    },
+    {
+      "name": "destination search success",
+      "passed": true
+    },
+    {
+      "name": "destination failure retains input and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "destination retry succeeds and late candidate is isolated",
+      "passed": true
+    },
+    {
+      "name": "placeSearch search success",
+      "passed": true
+    },
+    {
+      "name": "placeSearch failure retains input and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "placeSearch retry succeeds and late candidate is isolated",
+      "passed": true
+    },
+    {
+      "name": "route public search uses actual controlled JSON callback adapter",
+      "passed": true
+    },
+    {
+      "name": "route public search error retains name and clears candidates",
+      "passed": true
+    },
+    {
+      "name": "route public search retry and abort isolate late callback",
+      "passed": true
+    },
+    {
+      "name": "all displayed route/evidence/facility items have source types",
+      "passed": true
+    },
+    {
+      "name": "native control accepts keyboard focus",
+      "passed": true
+    },
+    {
+      "name": "narrow screen has no horizontal page overflow",
+      "passed": true
+    },
+    {
+      "name": "final preview fits 390px viewport",
+      "passed": true
+    }
+  ],
+  "queries": 30,
+  "locationControls": 2,
+  "realProviderRequests": 0,
+  "realConfirmedSamples": 0,
+  "requiredFieldVisits": 0,
+  "requiredLongTermMaintenance": 0,
+  "apiRequests": 0,
+  "externalTraffic": "Blocked by CSP; fake/absent map key; provider scripts intercepted before DOM; no real provider/GPS calls",
+  "artifact": "Current esbuild bundle of source",
+  "scope": "Synthetic DOM and engine navigation only; not real provider, account/elder API or physical accessibility"
+}

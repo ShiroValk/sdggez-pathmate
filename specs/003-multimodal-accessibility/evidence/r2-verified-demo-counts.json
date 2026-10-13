@@ -1,0 +1,16 @@
+{
+  "counts": {
+    "GET /memopath": 2,
+    "GET /assets/index-C3opCQ_b.js": 2,
+    "GET /assets/index-BuOds-sj.css": 2,
+    "GET /assets/memopath-logo-L9Bm53SZ.png": 2,
+    "POST /api/memopath/auth/login": 1,
+    "GET /api/memopath/auth/me": 2,
+    "GET /favicon.svg": 1
+  },
+  "testDatabaseOnly": true,
+  "businessWriteRequests": 0,
+  "kind": "actual-verified-demo-client",
+  "checkedAt": "2026-10-12T12:49:45.7931511Z",
+  "refreshRestoredPresets": true
+}

@@ -1,0 +1,56 @@
+# Project settings; preserve these when updating the official extension.
+branch_numbering: sequential
+branch_template: ''
+branch_prefix: feat
+init_commit_message: '[Spec Kit] Initial commit'
+commit_style: conventional
+auto_commit:
+  default: false
+  before_clarify:
+    enabled: false
+    message: '[Spec Kit] Save progress before clarification'
+  before_plan:
+    enabled: false
+    message: '[Spec Kit] Save progress before planning'
+  before_tasks:
+    enabled: false
+    message: '[Spec Kit] Save progress before task generation'
+  before_implement:
+    enabled: false
+    message: '[Spec Kit] Save progress before implementation'
+  before_checklist:
+    enabled: false
+    message: '[Spec Kit] Save progress before checklist'
+  before_analyze:
+    enabled: false
+    message: '[Spec Kit] Save progress before analysis'
+  before_taskstoissues:
+    enabled: false
+    message: '[Spec Kit] Save progress before issue sync'
+  after_constitution:
+    enabled: false
+    message: '[Spec Kit] Add project constitution'
+  after_specify:
+    enabled: true
+    message: '[Spec Kit] Add specification'
+  after_clarify:
+    enabled: true
+    message: '[Spec Kit] Clarify specification'
+  after_plan:
+    enabled: true
+    message: '[Spec Kit] Add implementation plan'
+  after_tasks:
+    enabled: true
+    message: '[Spec Kit] Add tasks'
+  after_implement:
+    enabled: true
+    message: '[Spec Kit] Implementation progress'
+  after_checklist:
+    enabled: false
+    message: '[Spec Kit] Add checklist'
+  after_analyze:
+    enabled: false
+    message: '[Spec Kit] Add analysis report'
+  after_taskstoissues:
+    enabled: false
+    message: '[Spec Kit] Sync tasks to issues'

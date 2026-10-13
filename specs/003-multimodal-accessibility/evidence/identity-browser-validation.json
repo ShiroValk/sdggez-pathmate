@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-12",
+  "kind": "actual-built-frontend-and-test-SQL-authentication",
+  "controlledProviderFailure": "Fixture CSP blocks external scripts; this is not a naturally observed AMap outage",
+  "checks": [
+    "actual elder registered and explicitly care-linked through existing APIs",
+    "actual elder login and asynchronously loaded linked dashboard",
+    "default live source without automatic GPS or route query",
+    "explicit public coordinate query shows timestamped live transport error",
+    "manual simulation selection yields labelled simulated route",
+    "wheelchair assessment remains labelled simulation with partial evidence",
+    "return and re-entry clears geometry summary instructions conclusion and endpoint inputs",
+    "logout through existing private settings removes route page",
+    "front-end demo entry keeps route source live and no old result"
+  ],
+  "sourceDenominator": {
+    "explicitSimulation": 6,
+    "labelled": 6,
+    "trueConfirmed": 0
+  },
+  "currentSnapshot": "- main:\n  - status: 前端演示模式：樣例資料只保存在本頁記憶體，不寫入資料庫。天氣、付款、叫車、告警及通知展示不代表真實服務。\n  - button \"返回\": ←\n  - heading \"地圖 ·\" [level=1]\n  - paragraph: 您想去邊度？\n  - heading \"出行方式與無障礙提示\" [level=2]\n  - text: 所選來源\n  - combobox \"所選來源\":\n    - option \"真實查詢\" [selected]\n    - option \"歷史回放\"\n    - option \"顯式模擬\"\n  - text: 出行方式與無障礙提示\n  - combobox \"出行方式與無障礙提示\":\n    - option \"步行\"\n    - option \"駕車\" [selected]\n    - option \"公交\"\n  - text: 起點名稱\n  - textbox \"起點名稱\"\n  - text: 經度,緯度（明確公共點）\n  - textbox \"經度,緯度（明確公共點）\"\n  - text: 終點名稱\n  - textbox \"終點名稱\"\n  - text: 經度,緯度（明確公共點）\n  - textbox \"經度,緯度（明確公共點）\"\n  - button \"用本機定位作起點\"\n  - button \"規劃／重試\"\n  - checkbox \"一般輪椅需求（資訊評估）\"\n  - text: 一般輪椅需求（資訊評估）\n  - button \"搜尋公共起點\"\n  - button \"搜尋公共終點\"\n  - status: 請明確選定起終點\n  - heading \"靜態來源連結（未載入設施內容）\" [level=3]\n  - article:\n    - link \"尖東站無障礙資料來源\":\n      - /url: https://www.mtr.com.hk/en/customer/services/free_search.php?station=80\n    - paragraph: 再利用許可／適用入口與日期未核實；不支持目前路段確認\n    - text: \"來源日期／查閱日期: 資料未提供 / 2026-10-11\"\n  - article:\n    - link \"香港科學館無障礙資料來源\":\n      - /url: https://hk.science.museum/en/web/scm/visit/barrier-free-facilities.html\n    - paragraph: 再利用許可／適用入口與日期未核實；不支持目前路段確認\n    - text: \"來源日期／查閱日期: 資料未提供 / 2026-10-11\"\n  - article:\n    - link \"香港藝術館無障礙資料來源\":\n      - /url: https://hk.art.museum/en/web/ma/visit/barrier-free-facilities.html\n    - paragraph: 再利用許可／適用入口與日期未核實；不支持目前路段確認\n    - text: \"來源日期／查閱日期: 資料未提供 / 2026-10-11\"\n  - button \"voice\": 🎙\n- region \"Notifications alt+T\""
+}

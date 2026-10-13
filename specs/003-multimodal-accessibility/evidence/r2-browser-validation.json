@@ -1,0 +1,314 @@
+{
+  "date": "2026-10-12T13:04:47.216Z",
+  "kind": "R2-controlled-DOM-only",
+  "checks": [
+    {
+      "name": "ordinary page has no source/scenario/replay/coordinate inputs",
+      "passed": true
+    },
+    {
+      "name": "three clear mode buttons; no automatic query/GPS",
+      "passed": true
+    },
+    {
+      "name": "readable nullable metric distance null",
+      "passed": true
+    },
+    {
+      "name": "readable nullable metric distance 0",
+      "passed": true
+    },
+    {
+      "name": "readable nullable metric distance 1250",
+      "passed": true
+    },
+    {
+      "name": "readable nullable metric duration 0",
+      "passed": true
+    },
+    {
+      "name": "readable nullable metric duration 3660",
+      "passed": true
+    },
+    {
+      "name": "explicit route uses current live endpoint snapshots",
+      "passed": true
+    },
+    {
+      "name": "directions and sources are collapsed by default",
+      "passed": true
+    },
+    {
+      "name": "plan A B A does not query",
+      "passed": true
+    },
+    {
+      "name": "wheelchair only evaluates with short insufficient hint",
+      "passed": true
+    },
+    {
+      "name": "evidenced accessibility UI partial",
+      "passed": true
+    },
+    {
+      "name": "evidenced accessibility UI no-date",
+      "passed": true
+    },
+    {
+      "name": "evidenced accessibility UI expired",
+      "passed": true
+    },
+    {
+      "name": "evidenced accessibility UI conflict",
+      "passed": true
+    },
+    {
+      "name": "evidenced accessibility UI barrier",
+      "passed": true
+    },
+    {
+      "name": "evidenced accessibility UI staff",
+      "passed": true
+    },
+    {
+      "name": "transit ordered legs and same-leg options present",
+      "passed": true
+    },
+    {
+      "name": "same-leg option roundtrip preserves transfer count and query batch",
+      "passed": true
+    },
+    {
+      "name": "new request immediately clears four output types",
+      "passed": true
+    },
+    {
+      "name": "late mode success cannot overwrite",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error identityGeneration",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error elderGeneration",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error viewGeneration",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error mapGeneration",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error screen",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error viewRole",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error elderId",
+      "passed": true
+    },
+    {
+      "name": "all context fields isolate late error demoMode",
+      "passed": true
+    },
+    {
+      "name": "no-route feedback no fake success",
+      "passed": true
+    },
+    {
+      "name": "error feedback no fake success",
+      "passed": true
+    },
+    {
+      "name": "typing invalidates selected endpoint and sends no route",
+      "passed": true
+    },
+    {
+      "name": "search disambiguates by district/address without coordinates",
+      "passed": true
+    },
+    {
+      "name": "explicit search candidate keeps legal zero internally",
+      "passed": true
+    },
+    {
+      "name": "late search does not refill candidates",
+      "passed": true
+    },
+    {
+      "name": "mode change rejects late device position",
+      "passed": true
+    },
+    {
+      "name": "GPS denial preserves preset inputs and retry path",
+      "passed": true
+    },
+    {
+      "name": "dispose removes all controller DOM",
+      "passed": true
+    },
+    {
+      "name": "production adapter rejects non-live instead of synthesizing",
+      "passed": true
+    },
+    {
+      "name": "legacy search JSON callback keeps valid zero",
+      "passed": true
+    },
+    {
+      "name": "legacy supported DTO and formatters unchanged",
+      "passed": true
+    },
+    {
+      "name": "adapter abort cleans callback and script",
+      "passed": true
+    },
+    {
+      "name": "adapter timeout remains bounded and cleans callback",
+      "passed": true
+    },
+    {
+      "name": "home has public preset shortcuts and no dedicated route entry",
+      "passed": true
+    },
+    {
+      "name": "ordinary place entry carries destination and public origin",
+      "passed": true
+    },
+    {
+      "name": "map load failure stays separate from successful route",
+      "passed": true
+    },
+    {
+      "name": "real engine map path draws supplied lines/markers and fits",
+      "passed": true
+    },
+    {
+      "name": "ordinary back destroys map and controller",
+      "passed": true
+    },
+    {
+      "name": "homeSearch search success",
+      "passed": true
+    },
+    {
+      "name": "homeSearch error retains text and clears candidate",
+      "passed": true
+    },
+    {
+      "name": "homeSearch retry isolates old callback",
+      "passed": true
+    },
+    {
+      "name": "ordinary home search carries walking and explicit zero endpoint",
+      "passed": true
+    },
+    {
+      "name": "ordinary scheduled preset enters same page without repeated search",
+      "passed": true
+    },
+    {
+      "name": "destination search success",
+      "passed": true
+    },
+    {
+      "name": "destination error retains text and clears candidate",
+      "passed": true
+    },
+    {
+      "name": "destination retry isolates old callback",
+      "passed": true
+    },
+    {
+      "name": "demo trip creates in page memory",
+      "passed": true
+    },
+    {
+      "name": "placeSearch search success",
+      "passed": true
+    },
+    {
+      "name": "placeSearch error retains text and clears candidate",
+      "passed": true
+    },
+    {
+      "name": "placeSearch retry isolates old callback",
+      "passed": true
+    },
+    {
+      "name": "demo place adds in memory",
+      "passed": true
+    },
+    {
+      "name": "demo place edit succeeds",
+      "passed": true
+    },
+    {
+      "name": "demo delete removes local item",
+      "passed": true
+    },
+    {
+      "name": "demo geofence updates without business API",
+      "passed": true
+    },
+    {
+      "name": "demo settings update in memory",
+      "passed": true
+    },
+    {
+      "name": "demo elder edit stays in page memory",
+      "passed": true
+    },
+    {
+      "name": "demo elder create stays in page memory",
+      "passed": true
+    },
+    {
+      "name": "cross-page and elder roundtrip retain demo trip",
+      "passed": true
+    },
+    {
+      "name": "demo business identity is not written to localStorage",
+      "passed": true
+    },
+    {
+      "name": "refresh marker restores demo ordinary view with preset data only",
+      "passed": true
+    },
+    {
+      "name": "refresh discards RAM trip and restores public presets",
+      "passed": true
+    },
+    {
+      "name": "390px component fits without child overflow",
+      "passed": true
+    },
+    {
+      "name": "ordinary mode button keyboard focus works",
+      "passed": true
+    },
+    {
+      "name": "mode buttons meet 44px target",
+      "passed": true
+    }
+  ],
+  "queries": 17,
+  "transportCalls": 18,
+  "controlledMaps": 19,
+  "removedOverlays": 3,
+  "realProviderRequests": 0,
+  "realGPS": 0,
+  "requiredFieldVisits": 0,
+  "requiredLongTermMaintenance": 0,
+  "apiRequests": 0,
+  "externalTraffic": "Blocked by CSP; fake/absent map key; provider scripts intercepted before DOM; no real provider/GPS calls",
+  "artifact": "Current esbuild bundle of source",
+  "scope": "Synthetic DOM and engine navigation only; not real provider, account/elder API or physical accessibility"
+}

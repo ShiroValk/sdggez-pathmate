@@ -28,6 +28,8 @@ spec002 已完成平台依赖移除及 converge 后的补充实施，T001–T076
 
 ## 协作约定
 
+开发流程见 [Spec Kit 与 Git 工作流](docs/git-workflow.md)，agent 规则见 [AGENTS.md](AGENTS.md)。
+
 - 主应用的改动放在 `existing_app/`；手表演示的改动放在 `watch_prototype/`。
 - 两个项目分别管理依赖、启动和构建，主应用原型不依赖手表运行。
 - `watch_prototype/` 是 Python 模拟演示，不是可安装到 Wear OS 的原生应用。

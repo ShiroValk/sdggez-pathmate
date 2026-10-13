@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-12T13:03:28.767Z",
+  "kind": "actual-browser-existing-AMap-services",
+  "ordinaryEntry": "elder home public place shortcut -> same tripMap",
+  "publicEndpoints": [
+    "香港理工大學",
+    "聖德肋撒醫院",
+    "香港國際機場T1出發"
+  ],
+  "inputs": "Public preset coordinates only; no private GPS",
+  "queries": {
+    "direction": 5,
+    "inputtips": 1,
+    "countBasis": "Explicit user UI operations; SDK/tiles not independently counted"
+  },
+  "results": [
+    {
+      "mode": "driving",
+      "destination": "聖德肋撒醫院",
+      "display": "11 分鐘 / 4.5 公里",
+      "mapAndInstructionsVisible": true
+    },
+    {
+      "mode": "walking",
+      "destination": "聖德肋撒醫院",
+      "display": "44 分鐘 / 3.2 公里",
+      "mapAndInstructionsVisible": true
+    },
+    {
+      "mode": "transit",
+      "destination": "聖德肋撒醫院",
+      "display": "35 分鐘 / 4.2 公里 / 0 次換乘",
+      "plans": 4,
+      "orderedLegs": [
+        "access walk",
+        "屯馬線 紅磡 -> 宋皇台",
+        "egress walk"
+      ]
+    },
+    {
+      "mode": "transit",
+      "destination": "香港國際機場T1出發",
+      "display": "1 小時 7 分鐘 / 38.2 公里 / 2 次換乘",
+      "plans": 5,
+      "orderedRides": [
+        "屯馬線",
+        "東涌線",
+        "S1"
+      ],
+      "rideCount": 3,
+      "transferCount": 2
+    }
+  ],
+  "nameSearch": {
+    "keyword": "香港科學館",
+    "actualCandidates": "香港科學館 and two south entrance candidates with district/address; explicit selection required",
+    "success": true
+  },
+  "finalArtifact": [
+    "/assets/index-CxFeFkkT.js"
+  ],
+  "finalDOM": "- main:\n  - status: 演示資料不保存\n  - button \"返回\": ←\n  - heading \"導航\" [level=1]\n  - text: 目的地\n  - textbox \"目的地\": 聖德肋撒醫院\n  - combobox \"目的地：選常用公共地點\":\n    - option \"選常用公共地點\" [selected]\n    - option \"香港理工大學\"\n    - option \"聖德肋撒醫院\"\n    - option \"尖東站P1出入口\"\n    - option \"香港科學館南門\"\n    - option \"香港國際機場T1出發\"\n  - button \"搜尋目的地\"\n  - paragraph: 已選定：聖德肋撒醫院\n  - text: 起點\n  - textbox \"起點\": 香港理工大學\n  - combobox \"起點：選常用公共地點\":\n    - option \"選常用公共地點\"\n    - option \"香港理工大學\" [selected]\n    - option \"聖德肋撒醫院\"\n    - option \"尖東站P1出入口\"\n    - option \"香港科學館南門\"\n    - option \"香港國際機場T1出發\"\n  - button \"搜尋起點\"\n  - paragraph: 已選定：香港理工大學\n  - button \"用我的位置\"\n  - group \"導航\":\n    - button \"步行\" [pressed]\n    - button \"駕車\"\n    - button \"公交\"\n  - button \"查看路線\"\n  - checkbox \"需要輪椅出行資訊\" [checked]\n  - text: 需要輪椅出行資訊\n  - status\n  - region \"路線地圖\":\n    - generic: 📍\n  - status\n  - article:\n    - heading \"聖德肋撒醫院\" [level=2]\n    - paragraph:\n      - strong: 44 分鐘\n      - generic: 3.2 公里\n      - generic: 步行\n    - paragraph: 無障礙資料不足，未能確認全程輪椅可達\n    - generic \"查看依據與缺口\"\n    - generic \"查看詳細指引\" [active]\n    - list:\n      - text: 步行\n      - list:\n        - listitem: 向东北步行151米左转\n        - listitem: 向西北步行28米右转\n        - listitem: 沿育才道向东北步行51米左转\n        - listitem: 向北步行37米右转\n        - listitem: 向东北步行155米右转\n        - listitem: 沿漆咸道北向东北步行285米向右前方行走\n        - listitem: 沿漆咸道北入口步行14米向右前方行走\n        - listitem: 向北步行112米直行\n        - listitem: 沿漆咸道北向东北步行161米向左前方行走\n        - listitem: 沿东九龙走廊出口步行1695米左转\n        - listitem: 沿富宁街向西北步行246米左转\n        - listitem: 沿亚皆老街向西南步行146米右转\n        - listitem: 沿露明道向北步行143米左转\n        - listitem: 向西步行24米到达目的地\n    - generic \"資料來源與限制\"\n  - button \"voice\": 🎙\n- region \"Notifications alt+T\"",
+  "viewport": {
+    "amapContainers": 1,
+    "forbiddenControls": 0,
+    "modeButtons": [
+      {
+        "height": 48,
+        "text": "步行"
+      },
+      {
+        "height": 48,
+        "text": "駕車"
+      },
+      {
+        "height": 48,
+        "text": "公交"
+      }
+    ],
+    "scrollWidth": 390,
+    "width": 390
+  },
+  "confirmedAccessibilitySamples": 0,
+  "requiredFieldVisits": 0,
+  "requiredLongTermMaintenance": 0,
+  "limitations": [
+    "Presets are public POIs, not verified entrances",
+    "Static facility source links only; no applicable full-route evidence",
+    "Private quota/category/paid-overage settings not independently verified",
+    "Initial interim home map error caused by incorrect state reference, fixed and final types/UI/build passed",
+    "No new provider/payment/proxy; no automatic fake fallback"
+  ]
+}

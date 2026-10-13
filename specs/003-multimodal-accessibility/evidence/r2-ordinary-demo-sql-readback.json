@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-12T12:53:07.218Z",
+  "kind": "actual-independent-test-SQL-readback",
+  "ordinaryClientLockLayout": true,
+  "demoPersistedTrips": 0,
+  "ordinarySettingWriteRequests": 1,
+  "counts": {
+    "GET /memopath": 3,
+    "GET /assets/index-C3opCQ_b.js": 3,
+    "GET /assets/index-BuOds-sj.css": 3,
+    "GET /assets/memopath-logo-L9Bm53SZ.png": 4,
+    "POST /api/memopath/auth/login": 2,
+    "GET /api/memopath/auth/me": 4,
+    "GET /favicon.svg": 2,
+    "POST /api/memopath/auth/logout": 1,
+    "GET /api/memopath/dashboard": 3,
+    "GET /api/memopath/settings": 5,
+    "GET /api/memopath/elders": 5,
+    "GET /api/memopath/trips": 1,
+    "PUT /api/memopath/settings": 1
+  },
+  "developmentDatabaseChanged": false
+}
