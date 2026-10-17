@@ -83,7 +83,9 @@ export function startVoiceRecognition(options: VoiceRecognizerOptions): VoiceRec
       else interim += transcript;
     }
     if (sessionFinal.trim().length > 0) {
-      finalAccum += sessionFinal;
+      // The browser returns the cumulative session list on every result event.
+      // Rebuild it rather than appending already finalised phrases again.
+      finalAccum = sessionFinal;
       options.onFinal(finalAccum.trim());
     } else if (interim.trim().length > 0) {
       options.onInterim(interim.trim());
