@@ -45,4 +45,6 @@ warnings and a map-grid advisory. The grid is an existing map placeholder,
 so it is not evidence of a broken application. No redesign was undertaken.
 
 Spec003 historical evidence remains historical; this review does not replace
-its team-recorded map and database verification. No code was pushed or deployed.
+its team-recorded map and database verification. At completion of the initial
+local review, no code had been pushed or deployed. Later GitHub delivery does
+not imply that the unverified integrations above have passed.
