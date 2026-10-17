@@ -56,7 +56,7 @@ export const MEMOPATH_CSS = `
 .memopath-stage .demo-hint{margin-top:14px;font-size:11px;color:#8f867b;text-align:center;cursor:pointer;text-decoration:underline dotted}
 .memopath-stage .mp-toast{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);background:#2c2119e6;color:#fff;border-radius:12px;padding:10px 18px;font-size:13px;z-index:50;max-width:320px;text-align:center;animation:mp-toast-in .25s ease}
 @keyframes mp-toast-in{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
-@media(max-width:430px){.memopath-stage{padding:0;background:var(--cream)}.memopath-stage #app{width:100vw;height:100svh;border-radius:0}.memopath-stage .screen{padding-top:max(22px,env(safe-area-inset-top))}}
+@media(max-width:430px){.memopath-stage{padding:0;background:var(--cream)}.memopath-stage #app{width:100vw;height:100svh;min-height:0;border-radius:0}.memopath-stage .screen{padding-top:max(22px,env(safe-area-inset-top))}}
 .memopath-stage .auth .logo{display:block;width:92px;height:86px}
 .memopath-stage .auth .logo img{width:100%;height:100%;object-fit:cover;border-radius:16px;mix-blend-mode:multiply}
 .memopath-stage .map-wrap{position:relative}
@@ -172,4 +172,10 @@ export const MEMOPATH_CSS = `
 .memopath-stage .cab-safety{flex:none;background:#f4ead9;border:1px solid var(--line);border-radius:16px;padding:12px 16px;font-size:15px;font-weight:700;line-height:1.3;box-shadow:var(--shadow)}
 .memopath-stage .cab-notify{flex:1;background:var(--green);color:#fff;border-radius:16px;padding:14px;font-size:21px;font-weight:800;box-shadow:var(--shadow)}
 .memopath-stage .mp-toast-btn{background:var(--gold);border-radius:8px;padding:6px 10px;margin-left:10px;font-size:13px;font-weight:700}
+
+.memopath-stage button{min-height:44px;min-width:44px}
+.memopath-stage :is(button,input,select,a,summary):focus-visible{outline:3px solid #365d92;outline-offset:3px}
+.memopath-stage .field label{color:#74695d}
+.memopath-stage .primary{background:var(--green-dark)}
+@media(prefers-reduced-motion:reduce){.memopath-stage .mp-toast{animation:none}}
 `;
