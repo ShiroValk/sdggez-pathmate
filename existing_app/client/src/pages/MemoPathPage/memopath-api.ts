@@ -1,5 +1,6 @@
 import { axiosForBackend } from '@/lib/http';
 import { logger } from '@/lib/logger';
+import { PUBLIC_DEMO_MODE } from '@/lib/demo-mode';
 import type {
   MemoPathAccountExistsResponse,
   MemoPathAccount,
@@ -39,10 +40,12 @@ let pendingLogoutToken = '';
 export function hasPendingLogout(): boolean { return pendingLogoutToken.length > 0; }
 
 export function getToken(): string {
+  if (PUBLIC_DEMO_MODE) return '';
   return localStorage.getItem(TOKEN_KEY) ?? '';
 }
 
 export function setToken(token: string): void {
+  if (PUBLIC_DEMO_MODE) return;
   if (token.length === 0) {
     localStorage.removeItem(TOKEN_KEY);
   } else {

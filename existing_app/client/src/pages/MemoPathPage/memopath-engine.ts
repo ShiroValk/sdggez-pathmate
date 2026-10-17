@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { PUBLIC_DEMO_MODE } from '@/lib/demo-mode';
 import type {
   MemoPathAlertRecord,
   MemoPathContactRecord,
@@ -486,7 +487,7 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
       app.querySelectorAll<HTMLButtonElement>('[data-go="elders"], [data-go="editElder"], [data-action="switchElder"], [data-action="newElder"], [data-action="saveElder"], [data-action="newTrip"], [data-action="saveTrip"], [data-action="addPlace"], [data-action="confirmPlace"], [data-action="saveGeofence"], [data-action="toggleDwell"], [data-action^="radius:"]').forEach(button => { button.disabled = true; button.title = '長者帳號只可讀取照護資料，管理變更由家屬操作'; });
     }
     if (state.demoMode) {
-      app.insertAdjacentHTML('afterbegin', '<p class="demo-hint demo-memory-hint" role="status">演示資料不保存</p>');
+      app.insertAdjacentHTML('afterbegin', `<p class="demo-hint demo-memory-hint" role="status">${PUBLIC_DEMO_MODE ? '公開演示 · 資料不保存' : '演示資料不保存'}</p>`);
     } else if (authenticatedRole !== null && state.screen !== 'tripMap') {
       app.insertAdjacentHTML('afterbegin', `<p class="demo-hint" role="status">${authenticatedIsDemo ? '演示帳號：使用真實認證，資料保存至隔離的演示資料範圍。' : '帳號資料使用真實認證與資料庫保存。'}叫車、求助、告警及通知為演示，未接入送達服務。地圖定位僅代表本機裝置，不是長者遠端位置；體徵展示不提供健康判斷。</p>`);
     }
@@ -906,6 +907,9 @@ export function mountMemoApp(app: HTMLElement, logoUrl: string): () => void {
     `<div class="map-wrap">${kind === 'home' || (large && state.screen === 'tripMap') ? homeSearchHtml() : (large ? '' : `<button class="map-search" data-go="elderMap">⌕\u3000${t('mapPlaceholder')} <span style="float:right">🎙️</span></button>`)}<div class="map amp ${large ? 'large' : ''}" data-map="${kind}"></div></div>`;
 
   function login(): string {
+    if (PUBLIC_DEMO_MODE) {
+      return `<section class="screen auth"><span class="logo">${logo}</span><h1 class="brand-title">PathMate / MemoPath</h1><p class="tagline">公開互動演示 · 無須安裝或註冊</p><p>先選擇想體驗的角色</p><div class="segmented"><button class="seg ${state.role === 'elder' ? 'active' : ''}" data-role="elder">${t('elderEntry')}</button><button class="seg ${state.role === 'family' ? 'active' : ''}" data-role="family">${t('familyEntry')}</button></div><button class="primary" data-action="frontDemo">開始體驗</button><div class="panel"><p>無須帳號密碼；請勿輸入真實個人資料。</p><p>這是前端演示，修改刷新後恢復。地圖與即時路線未配置；求助、叫車、天氣及通知仍為演示。</p></div></section>`;
+    }
     return `<section class="screen auth"><span class="logo">${logo}</span><h1 class="brand-title">${t('brandName')} MemoPath</h1><p class="tagline">${t('tagline')}</p><div class="segmented"><button class="seg ${state.role === 'elder' ? 'active' : ''}" data-role="elder">${t('elderEntry')}</button><button class="seg ${state.role === 'family' ? 'active' : ''}" data-role="family">${t('familyEntry')}</button></div><div class="panel"><div class="field"><label for="memopath-login-account">${t('phoneLabel')}</label><input id="memopath-login-account" autocomplete="username" class="input" data-field="loginAccount" value="${esc(state.loginAccount)}" placeholder="│輸入手機號碼"></div><div class="field"><label for="memopath-login-password">${t('passwordLabel')}</label><input id="memopath-login-password" autocomplete="current-password" class="input" type="password" data-field="loginPassword" value="${esc(state.loginPassword)}" placeholder="│輸入密碼"></div><button class="forgot" data-go="register1">${t('forgot')}</button></div><button class="primary" data-action="login">${t('login')}</button><button class="secondary-link" data-action="frontDemo">演示登入</button>${hasPendingLogout() ? '<button class="secondary-link" data-action="retryLogout">重試撤銷舊會話</button>' : ''}<button class="secondary-link" data-go="register1">${t('newUser')}<span>${t('registerNow')}</span></button><p class="demo-hint">真實帳號需註冊；演示帳號 demo / demo1234：業務資料不保存。</p></section>`;
   }
 
