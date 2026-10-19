@@ -7,6 +7,12 @@
 | [existing_app/](existing_app/) | 主应用，React + Vite 前端、NestJS 后端，独立 PostgreSQL 数据库 | 无须原平台环境；按 [主应用运行说明](existing_app/README.md) 配置 Node.js、Docker Desktop 和本机数据库 |
 | [watch_prototype/](watch_prototype/) | Python 手表模拟原型，含演示后端、长者端和家属端 | 依照 [原型运行说明](watch_prototype/README.md) 安装和启动 |
 
+## 原型演示视频
+
+- [在线观看（OneDrive）](https://1drv.ms/v/c/60e0f916e1a89427/IQAtpTqdAiY7RIeDBXPYA7pgATX9ki1ieayJmOaXx86OFsA?e=wnLgKH)
+- [仓库内视频（MP4，约 2 分 43 秒）](docs/demo/pathmate-demo.mp4)
+- [演示说明](docs/demo/README.md)
+
 ## 目录结构
 
 ```text
